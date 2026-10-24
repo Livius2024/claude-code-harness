@@ -33,10 +33,11 @@ Recomandările lui Leon van Zyl (seria „harness engineering”) și ale comuni
 |---|---|---|
 | SessionStart | `harness/session-context.mjs` | Spune agentului starea git, documentele proiectului (AGENTS.md, GLOSSARY.md, ADR) și dacă există HANDOFF.md. După compactare repetă regulile de bază. |
 | UserPromptSubmit | `harness/prompt-guard.mjs` | Blochează mesajele care conțin chei secrete. Altfel adaugă un „Skill hint” (RO + EN) pentru skill-ul Matt potrivit. |
-| PreToolUse | `harness/git-guardrail.mjs` | Blochează force-push, `reset --hard`, `clean -f`, push pe `main`. |
+| PreToolUse | `harness/git-guardrail.mjs` | Blochează force-push, `reset --hard`, `clean -f`, push pe `main` (și push simplu din `main`), ștergeri de branch/stash forțate, `--no-verify`, în orice scriere (`git -C`, `git.exe`, ghilimele, `bash -c "…"`, `node -e`, `$(…)`, blocuri PowerShell, rânduri continuate, redirecționări), plus comenzile pe care git le rulează singur (`rebase --exec`, `submodule foreach`, `bisect run`, alias-uri `!`). Push-ul simplu e judecat în folderul în care a ajuns comanda după `cd`. Mesajele de commit nu sunt citite ca flag-uri. Rulează pe Bash, PowerShell, terminalul aplicației și Desktop Commander. Teste: `git-guardrail.test.mjs`. |
 | PostToolUse | `chisle-compress/` | Scurtează output-urile foarte lungi (originalul rămâne în `chisle-spill`). |
-| Stop | `harness/verify-gate.mjs` | Dacă s-a schimbat cod, rulează typecheck, lint și teste (sau comenzile din `.claude/verify.json`). Semnalează testele șterse sau sărite (`.skip`). Agentul nu poate spune „gata” până nu trec; un timeout e NEVERIFICAT, nu trecere. |
+| Stop | `harness/verify-gate.mjs` | Dacă s-a schimbat cod, rulează typecheck, lint și teste (sau comenzile din `.claude/verify.json`). Semnalează testele șterse sau sărite (`.skip`). Agentul nu poate spune „gata” până nu trec; un timeout e NEVERIFICAT, nu trecere. Ține minte commit-ul de la începutul sesiunii, deci verifică și codul pe care agentul l-a comis înainte să se oprească. Teste: `verify-gate.test.mjs`. |
 | Permisiuni | `ask` pe `.env*` (fără `.env.example`) | Editarea fișierelor cu secrete cere aprobarea ta. |
+| Permisiuni | `deny` pe uneltele de proces și scriere din Desktop Commander | Ar ocoli hook-urile și regulile `.env`; Claude Code are uneltele proprii. Citirea prin Desktop Commander rămâne permisă. |
 | Plugin | security-guidance | Verifică securitatea diff-urilor, în fundal. |
 
 Oprire temporară a verificării automate: variabila de mediu `HARNESS_VERIFY=0`.
@@ -172,4 +173,6 @@ Varianta din linia de comandă: `.\new-project.ps1 -Path "C:\Proiecte\x" -Name "
 
 ## Revenire la configurația veche
 
-Copiază `settings.json` și `CLAUDE.md` din backup înapoi în `C:\Users\LIVIUS\.claude\`.
+Copiază `settings.json` și `CLAUDE.md` din backup înapoi în `C:\Users\LIVIUS\.claude\` (ultimul: `backups\harness-fix-2026-10-24`).
+
+Din 24.10.2026, mapa aceasta și `C:\Users\LIVIUS\.claude\hooks\` sunt depozite git: orice modificare a hook-urilor sau a documentației se poate anula. Testele hook-urilor: `node --test "harness/*.test.mjs"` rulat din `C:\Users\LIVIUS\.claude\hooks\`.
