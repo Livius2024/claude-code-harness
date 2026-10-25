@@ -1,0 +1,24 @@
+# Tooling for this repository's own checks (the starter scripts and their tests).
+# Projects created from project-starter bring their own pyproject.toml.
+[project]
+name = "claude-code-harness"
+version = "0.0.0"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.pyright]
+include = ["project-starter/scripts", "tests"]
+extraPaths = ["project-starter/scripts", "tests"]
+pythonVersion = "3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = ["pytest>=8", "pyright>=1.1.380", "ruff>=0.6"]

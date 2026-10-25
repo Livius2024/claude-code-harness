@@ -1,0 +1,23 @@
+# Paths only the owner approves. A PR that changes one of them needs the
+# `owner-approved` label before CI passes and auto-merge can merge it.
+# One glob per line; `dir/**` = everything under dir. Adjust to the project.
+
+# Domain rules: tax, audit, accounting, legal
+docs/domain/**
+**/fiscal*
+**/*_fiscal*
+**/tax*
+**/*_tax*
+**/audit_rule*
+**/*_audit_rule*
+**/rules/**
+
+# The contract and the gates
+spec.md
+plan.md
+AGENTS.md
+CLAUDE.md
+.claude/**
+.github/**
+scripts/check_acceptance.py
+scripts/check_owner_approval.py

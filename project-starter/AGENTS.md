@@ -33,7 +33,7 @@ This file was copied from the project starter. Before any other work (exception:
 | DB migration | `<npm run db:generate && npm run db:migrate>` |
 
 Run the narrowest relevant check after each change, and the full set before calling work done.
-The same commands go in `.claude/verify.json`; Claude Code's verify gate runs them when it stops.
+CI (`.github/workflows/ci.yml`) runs the same commands on every PR and is the gate that decides the merge. Locally, the same commands also go in `.claude/verify.json` for Claude Code's verify gate.
 
 ## Layout
 
@@ -63,7 +63,8 @@ Repair budget: 3 attempts per failing check. When it is spent, report **BLOCAT**
 ## Shared files and roles
 
 - `spec.md` (what, for whom, non-goals, domain rules) and `plan.md` (architecture, stack, order of work) are approved by the owner and are the contract.
-- `ACCEPTANCE.md`: one row per requirement, ID → requirement in the owner's words → verifiable criterion → command or scenario → status (PASS / FAIL / NEVERIFICAT / BLOCAT) → SHA → evidence path. A row without a command or scenario can never be PASS. Status changes only with the command's real result on the current SHA.
+- Requirements manifest: the `## Requirements` section of `spec.md`, one item per requirement, `- R1: <owner's words>`. IDs are never reused or renumbered; a dropped requirement stays listed as `- R7: (dropped <date>) ...` with its row marked in Evidence.
+- `ACCEPTANCE.md`: exactly one row per manifest ID (CI's `acceptance` check fails otherwise), ID → requirement in the owner's words → verifiable criterion → command or scenario → status (PASS / FAIL / NEVERIFICAT / BLOCAT) → SHA → evidence path. A row without a command or scenario can never be PASS. Status changes only with the command's real result on the current SHA.
 - `HANDOFF.md`: state at a pause (what is done, what is next, open questions).
 - Roles when both engines work on the repo: Claude Code builds and decides; Codex reviews, tests, debugs and fixes what the brief names. The checker reads the diff, `spec.md`, `plan.md` and `ACCEPTANCE.md` and runs the commands itself; it never trusts the builder's summary. After a fix by one engine, the other re-checks the same SHA. Nobody rewrites `spec.md` or relaxes an acceptance row to make a result look green.
 - Use sub-agents for research and for independent tickets that can run in parallel.
@@ -91,7 +92,8 @@ What this product must always do or never do, whatever the speed or cost trade-o
 ## Safety
 
 - Never commit secrets; never edit `.env*` unless asked (`.env.example` is the exception: names only, never a value). Never touch production data.
-- No force-push, history rewrite, `reset --hard`, or push to `main` without explicit approval.
+- No force-push, history rewrite, `reset --hard`, or push to `main`. Everything reaches `main` through a PR with green required checks.
+- Never add the `owner-approved` label, change `.github/owner-approval-paths.txt`, or edit CI, branch protection or the check scripts to get a PR through. Those changes are the owner's.
 - Never delete, skip or weaken a failing test to make the suite pass. Fix the code, or report why you can't.
 - Never assume a change works: test it. If the project has no way to test it, ask the owner whether to skip testing.
 
@@ -101,5 +103,21 @@ What this product must always do or never do, whatever the speed or cost trade-o
 2. Type check and lint pass.
 3. For UI: the page was checked in a browser at desktop and phone width.
 4. The affected `ACCEPTANCE.md` rows are PASS on the current SHA, with the evidence path filled in.
-5. A review by the other engine (Codex from Claude Code, or Claude from Codex) ran on the final change; findings of severity medium or higher are fixed or explicitly accepted by the owner. In an `/autopilot` run, Autopilot's blind acceptance is that independent check; a Codex review on top only if the owner asks.
-6. The report says what changed, which checks ran, and what is still unverified.
+5. A review by the other engine ran on the final change: on GitHub, Codex's automatic PR review (rules below); findings P0/P1 are fixed or explicitly accepted by the owner, and their conversations resolved. In an `/autopilot` run, Autopilot's blind acceptance is that independent check; a Codex review on top only if the owner asks.
+6. The required checks are green on the PR's last commit and the PR merges through auto-merge; a PR touching an owner-only path waits for the owner's `owner-approved` label.
+7. The report says what changed, which checks ran, and what is still unverified.
+
+## Code Review Rules
+
+Codex reads this section when it reviews a pull request. Flag as **P0** or **P1** (anything below is optional):
+
+- **P0** A number, rate, account code, legal reference or tax/audit rule that does not come from `spec.md`, `GLOSSARY.md`, `docs/domain/` or a source cited in the code. Money computed with floats instead of `Decimal` (Python) or integer minor units.
+- **P0** A secret, token or real personal/client data in the diff; a `.env` file other than `.env.example`.
+- **P0** A test deleted, skipped (`skip`, `xfail`, `.only`, `xit`) or loosened, a CI step, required check or `.github/owner-approval-paths.txt` weakened, or an `ACCEPTANCE.md` criterion relaxed, in order to make something pass.
+- **P1** The PR does something no requirement in its `Requirements:` line asks for, or misses part of one (compare with `spec.md` and the linked issue). Flag drift from `plan.md` (stack, architecture, layout) too.
+- **P1** An `ACCEPTANCE.md` row set to PASS without a command that exercises the requirement, without this PR's SHA, or with evidence that does not show the result.
+- **P1** New behaviour without a test that would fail if it broke; tests that only mirror the code's own output for money or tax values.
+- **P1** A schema change without a committed migration; a query or migration aimed at production.
+- **P1** User input reaching SQL, shell, file paths or HTML unescaped; a missing access check on another user's or company's data.
+
+Do not flag style the linters already enforce.

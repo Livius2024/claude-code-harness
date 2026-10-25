@@ -14,6 +14,21 @@ Totul e **global**, pentru toate proiectele. Fiecare piesă pornește singură, 
 
 Încărcarea tuturor skill-urilor de la început ar umple contextul și ar face agentul mai slab, nu mai bun.
 
+## Adăugat pe 25.10.2026: porțile stau în GitHub (pentru firele din Projects)
+
+Firele (threads) unui proiect claude.ai încarcă din repo doar `CLAUDE.md`, `.claude/CLAUDE.md` și `.claude/rules/*.md` fără `paths:`. Hook-urile, `settings.json`, skill-urile din repo și `.mcp.json` **nu rulează acolo**, deci tot ce e mai jos (verify gate, prompt-guard) e valabil doar local. În cloud, porțile sunt în GitHub:
+
+| Poartă | Fișier în `project-starter/` |
+|---|---|
+| Fluxul fabricii (spec → tichete → PR → verificări → auto-merge), încărcat de orice fir | `.claude/rules/factory.md` |
+| Teste, tipuri, lint | `.github/workflows/ci.yml` (job `checks`) |
+| Fiecare cerință `R<n>` din `spec.md` are rând în `ACCEPTANCE.md` | `scripts/check_acceptance.py` (job `acceptance`) |
+| PR-urile care ating reguli fiscale/audit, contractul sau porțile așteaptă eticheta ta `owner-approved` | `.github/workflows/owner-approval.yml`, `.github/owner-approval-paths.txt` |
+| Review Codex automat, P0/P1 | secțiunea `## Code Review Rules` din `AGENTS.md` |
+| `main` protejat, merge doar cu verificările verzi | `.github/branch-protection.json` |
+
+Pașii de pornire pe un repo (auto-merge, eticheta, protecția ramurii) sunt în `project-starter/docs/github-gates.md`.
+
 ## Skill-uri
 
 - **Matt Pocock 1.3.1** e setul principal pentru inginerie.
@@ -162,7 +177,12 @@ La noi, skill-urile, hook-urile și MCP-urile sunt deja globale. De aceea mapa c
 | `.claude/settings.json` | Comenzile sigure permise; `db push` interzis |
 | `.claude/rules/` | Reguli care se încarcă doar pentru fișierele lor: teste, UI, baze de date, 1C |
 | `.claude/verify.example.json` | Comenzile de verificare, după ce există |
-| `.github/workflows/ci.yml` | Aceleași verificări pe GitHub; sare peste ce nu există încă |
+| `.claude/rules/factory.md` | Fluxul fabricii; singura regulă fără `paths:`, deci încărcată și în firele din cloud |
+| `.github/workflows/ci.yml` | Teste, tipuri, lint, build + verificarea `ACCEPTANCE.md`; sare peste ce nu există încă |
+| `.github/workflows/owner-approval.yml`, `.github/owner-approval-paths.txt` | PR-urile pe reguli așteaptă eticheta ta `owner-approved` |
+| `.github/branch-protection.json`, `docs/github-gates.md` | Protecția lui `main` și auto-merge, cu pașii de pornire |
+| `.github/pull_request_template.md` | PR-ul spune ce cerințe (`R<n>`) acoperă |
+| `scripts/` | Verificările de mai sus, doar biblioteca standard Python |
 | `.gitignore` | Secrete, `.scratch/`, `HANDOFF.md` |
 
 Nu am copiat sub-agenții și skill-urile lui Leon în proiect. Rolurile lor (cod, review, securitate, spec) le acoperă deja Matt Pocock, security-guidance și skill-urile globale. Două seturi ar intra în conflict.

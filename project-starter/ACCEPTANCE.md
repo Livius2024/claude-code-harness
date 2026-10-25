@@ -1,6 +1,15 @@
 # ACCEPTANCE.md — <project name>
 
-One row per requirement from `spec.md`. The checker (Codex when Claude Code built, Claude when Codex built, and the owner) reads this file, not the builder's summary.
+Exactly one row per requirement in the manifest: the `## Requirements` section of `spec.md`, written as
+
+```
+## Requirements
+
+- R1: Import a CSV of invoices
+- R2: Show the VAT total per month
+```
+
+CI (`python scripts/check_acceptance.py`) fails when a manifest ID has no row, a row has an ID not in the manifest, an ID repeats, a status is not one of the four below, or a PASS row lacks its command, SHA or evidence. Until `spec.md` exists the check passes; delete the `<...>` example rows when you add the first real ones. The checker (Codex when Claude Code built, Claude when Codex built, and the owner) reads this file, not the builder's summary.
 
 Rules:
 - Status is one of **PASS**, **FAIL**, **NEVERIFICAT** (the check did not run: timeout, missing tool, missing access), **BLOCAT** (repair budget spent; diagnosis in Evidence).
