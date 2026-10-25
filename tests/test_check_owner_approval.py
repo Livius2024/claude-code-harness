@@ -99,3 +99,11 @@ def test_renaming_a_protected_file_needs_label(repo):
     head = git(repo, "rev-parse", "HEAD")
     assert run(repo, base, head) == 1
     assert run(repo, base, head, "owner-approved") == 0
+
+
+def test_protected_file_with_a_non_ascii_name_needs_label(repo):
+    # git quotes and octal-escapes non-ASCII paths unless asked for NUL-separated output.
+    base = git(repo, "rev-parse", "HEAD")
+    head = commit(repo, "docs/domain/Налог.md")
+    assert run(repo, base, head) == 1
+    assert run(repo, base, head, "owner-approved") == 0
