@@ -239,3 +239,13 @@ def test_without_require_guard_annotations_are_not_needed(tmp_path):
         file_suite("a.spec.ts", specs=[{"title": "R1", "tests": [pw_test("desktop", "expected", [result("passed")])]}])
     )
     run(tmp_path, data, "--strict", code=0)
+
+
+def test_a_run_level_error_turns_the_comment_red_even_when_every_check_passed(tmp_path):
+    # e.g. a globalTeardown failure: Playwright reports it in the top-level `errors`, not in a test.
+    data = one_check(pw_test("desktop", "expected", [result("passed")]))
+    data["errors"] = [{"message": "\x1b[31mError: teardown failed\x1b[39m"}]
+    comment = run(tmp_path, data, "--strict", code=1)
+    assert "## ❌ Browser QA" in comment
+    assert "Error: teardown failed" in comment
+    assert "\x1b[" not in comment
