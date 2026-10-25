@@ -2,8 +2,9 @@
 # copies project-starter/e2e and its scripts next to a demo app
 # (tests/browser_qa_demo: pages plus a small JSON API), turns browser QA on,
 # runs it, and posts the screenshots on the PR the same way a project's
-# browser-qa.yml does. Its guard checks prove the backend guard in
-# e2e/fixtures.ts fails a check on a failed request or a server-log error.
+# browser-qa.yml does. First it runs the starter's guard self-test
+# (e2e/guard-selftest), which proves the backend guard in e2e/fixtures.ts
+# fails a check on a failed request or a server-log error.
 name: Browser QA self-test
 
 on:
@@ -48,13 +49,14 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium
+      - name: Run the guard self-test (e2e/guard-selftest)
+        working-directory: ${{ runner.temp }}/demo/e2e
+        run: npx playwright test -c guard-selftest
       - name: Run the browser checks
         working-directory: ${{ runner.temp }}/demo/e2e
         env:
           START_COMMAND: python3 -u site/server.py 8000
-        # One worker: the guard checks log a server error on purpose, and a
-        # parallel check would see it too (the guard reads the log by time window).
-        run: npx playwright test --workers=1
+        run: npx playwright test
       - name: Write the PR comment
         if: always()
         working-directory: ${{ runner.temp }}/demo

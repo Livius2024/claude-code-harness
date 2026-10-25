@@ -1,0 +1,41 @@
+# Self-test of the browser QA backend guard (e2e/fixtures.ts): runs
+# e2e/guard-selftest/ against its own tiny server, whatever the state of the
+# app's browser QA. Each check there marked test.fail() passes only if the
+# guard fails it, so a weakened guard turns this job red. Runs only when the
+# guard or its self-test changes.
+name: Browser QA guard
+
+on:
+  pull_request:
+    paths:
+      - e2e/fixtures.ts
+      - e2e/server-log.ts
+      - e2e/package.json
+      - e2e/package-lock.json
+      - e2e/guard-selftest/**
+      - .github/workflows/browser-qa-guard.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-qa-guard-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  guard-selftest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright and Chromium
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Run the guard self-test
+        working-directory: e2e
+        run: npx playwright test -c guard-selftest

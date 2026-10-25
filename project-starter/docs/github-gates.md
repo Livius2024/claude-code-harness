@@ -8,6 +8,7 @@
 | `acceptance` | `ci.yml` + `scripts/check_acceptance.py` | O cerință `R<n>` din `spec.md` fără rând în `ACCEPTANCE.md`, rânduri orfane, PASS fără comandă, SHA sau dovadă |
 | `owner-approval` | `.github/workflows/owner-approval.yml` + `.github/owner-approval-paths.txt` | Un PR care atinge reguli fiscale/audit/contabile/legale, contractul (`spec.md`, `plan.md`, `AGENTS.md`) sau porțile, până pui tu eticheta `owner-approved` |
 | `browser-qa` (opțional) | `.github/workflows/browser-qa.yml` + `e2e/` | Un ecran care nu se deschide sau nu arată ce cere `ACCEPTANCE.md`, la desktop și pe telefon. Pune pe PR un comentariu cu capturi de ecran. Oprit până există `e2e/playwright.config.ts` |
+| `guard-selftest` (când se schimbă garda) | `.github/workflows/browser-qa-guard.yml` + `e2e/guard-selftest/` | O gardă de backend slăbită: verificările făcute să pice intenționat (eroare API, conexiune refuzată, eroare în log) trebuie să pice. Rulează doar pe PR-urile care ating garda, chiar dacă QA în browser e oprit |
 | Review Codex | chatgpt.com → Settings → Code review (automatic) | Constatări P0/P1 după `## Code Review Rules` din `AGENTS.md`; PR-ul nu se unește până nu sunt rezolvate conversațiile |
 | Protecția ramurii `main` | `.github/branch-protection.json` | Push direct, force-push, ștergere; merge fără cele 3 verificări verzi sau cu conversații nerezolvate. Doar pe GitHub Pro; pe repo-urile private Free regula o respectă agentul |
 

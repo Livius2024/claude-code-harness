@@ -5,7 +5,7 @@ e2e/fixtures.ts wraps Playwright's `test` so every check also fails on a
 failed request to the app (HTTP 4xx/5xx, connection error) and on an error in
 the server log. A spec that gets `test` from Playwright another way skips that
 guard, so this script fails when any file under e2e/ other than fixtures.ts
-and playwright.config.* imports a value from a Playwright package (directly,
+and the playwright.config.* files imports a value from a Playwright package (directly,
 or in a helper the spec imports; type-only imports are fine), or when
 e2e/fixtures.ts is missing. CI runs it before the browser checks; the
 `backend-guard` annotation checked by browser_qa_comment.py --require-guard
@@ -33,9 +33,15 @@ VALUE_IMPORT = re.compile(
 SKIP_DIRS = {"node_modules", "test-results", "report", "playwright-report"}
 
 
+# The guard itself, the app's config and the guard self-test's config (e2e/guard-selftest/).
+CONFIG_DIRS = {(), ("guard-selftest",)}
+
+
 def allowed(path: Path, e2e: Path) -> bool:
     rel = path.relative_to(e2e)
-    return rel.as_posix() == "fixtures.ts" or (len(rel.parts) == 1 and rel.name.startswith("playwright.config."))
+    return rel.as_posix() == "fixtures.ts" or (
+        rel.parts[:-1] in CONFIG_DIRS and rel.name.startswith("playwright.config.")
+    )
 
 
 def offenders(e2e: Path) -> list[Path]:

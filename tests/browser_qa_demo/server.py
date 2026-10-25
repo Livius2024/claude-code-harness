@@ -26,8 +26,6 @@ class Handler(SimpleHTTPRequestHandler):
         data = json.dumps(body).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
-        # The guard self-test calls the API from another local origin.
-        self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)

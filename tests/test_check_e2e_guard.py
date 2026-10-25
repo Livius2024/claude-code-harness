@@ -74,3 +74,17 @@ def test_the_config_fixtures_and_installed_packages_may_import_playwright(tmp_pa
     module.write_text("module.exports = require('playwright/test');\n", encoding="utf-8")
     spec(tmp_path, "smoke.spec.ts", "import { test } from '../fixtures';\n")
     assert main(["--root", str(tmp_path)]) == 0
+
+
+def test_the_guard_self_test_config_may_import_playwright_but_its_specs_may_not(tmp_path, capsys):
+    fixtures(tmp_path)
+    selftest = tmp_path / "e2e" / "guard-selftest"
+    selftest.mkdir()
+    (selftest / "playwright.config.ts").write_text(
+        "import { defineConfig } from '@playwright/test';\n", encoding="utf-8"
+    )
+    (selftest / "guard.spec.ts").write_text("import { test } from '../fixtures';\n", encoding="utf-8")
+    assert main(["--root", str(tmp_path)]) == 0
+    (selftest / "guard.spec.ts").write_text("import { test } from '@playwright/test';\n", encoding="utf-8")
+    assert main(["--root", str(tmp_path)]) == 1
+    assert "e2e/guard-selftest/guard.spec.ts" in capsys.readouterr().out
