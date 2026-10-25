@@ -27,3 +27,4 @@ scripts/browser_qa_comment.py
 e2e/fixtures.ts
 e2e/server-log.ts
 e2e/playwright.config.ts
+e2e/guard-selftest/**

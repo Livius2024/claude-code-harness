@@ -27,6 +27,7 @@ PATTERNS = read_patterns(STARTER / ".github" / "owner-approval-paths.txt")
         "e2e/fixtures.ts",
         "e2e/server-log.ts",
         "e2e/playwright.config.ts",
+        "e2e/guard-selftest/guard.spec.ts",
     ],
 )
 def test_protected_paths(path):

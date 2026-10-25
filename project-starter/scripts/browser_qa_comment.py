@@ -30,6 +30,7 @@ import json
 import re
 import shutil
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -107,8 +108,17 @@ def _first_error(result: dict) -> str:
     errors = result.get("errors") or ([result["error"]] if result.get("error") else [])
     if not errors:
         return ""
-    text = re.sub(r"\x1b\[[0-9;]*m", "", errors[0].get("message", "")).strip()
+    return _clean(errors[0])
+
+
+def _clean(error: dict) -> str:
+    text = re.sub(r"\x1b\[[0-9;]*m", "", error.get("message", "")).strip()
     return text[:ERROR_CHARS] + ("…" if len(text) > ERROR_CHARS else "")
+
+
+def read_run_errors(report: dict) -> list[str]:
+    """Errors outside any check, e.g. a failing globalSetup or globalTeardown."""
+    return [_clean(error) for error in report.get("errors") or []]
 
 
 def _guarded(test: dict, result: dict) -> bool:
@@ -169,24 +179,32 @@ def _url(base: str, name: str) -> str:
     return f"{base.rstrip('/')}/{name}?raw=true" if base else f"shots/{name}"
 
 
-def is_green(checks: list[Check]) -> bool:
-    return bool(checks) and all(check.status == "expected" for check in checks)
+def is_green(checks: list[Check], run_errors: Sequence[str] = ()) -> bool:
+    return bool(checks) and not run_errors and all(check.status == "expected" for check in checks)
 
 
-def headline(checks: list[Check]) -> str:
-    if is_green(checks):
+def headline(checks: list[Check], run_errors: Sequence[str] = ()) -> str:
+    if is_green(checks, run_errors):
         return "✅ Browser QA"
-    if checks and all(check.status in ("expected", "skipped") for check in checks):
+    if not run_errors and checks and all(check.status in ("expected", "skipped") for check in checks):
         return "⚠️ Browser QA: NEVERIFICAT"
     return "❌ Browser QA"
 
 
-def render(checks: list[Check], names: dict[int, str], *, image_base: str, run_url: str, sha: str) -> str:
+def render(
+    checks: list[Check],
+    names: dict[int, str],
+    *,
+    image_base: str,
+    run_url: str,
+    sha: str,
+    run_errors: Sequence[str] = (),
+) -> str:
     projects = list(dict.fromkeys(run.project for check in checks for run in check.runs))
     counts = {key: sum(1 for check in checks if check.status == key) for key in STATUS}
     summary = " · ".join(f"{STATUS[key]} {counts[key]}" for key in STATUS if counts[key])
 
-    lines = [MARKER, f"## {headline(checks)}", ""]
+    lines = [MARKER, f"## {headline(checks, run_errors)}", ""]
     meta = [f"Commit `{sha[:7]}`" if sha else "", f"[run, full report and traces]({run_url})" if run_url else ""]
     lines += [f"{summary or 'No checks found in e2e/tests/'}", " · ".join(part for part in meta if part), ""]
 
@@ -198,6 +216,12 @@ def render(checks: list[Check], names: dict[int, str], *, image_base: str, run_u
             cells = [by_project.get(project, "—") for project in projects]
             lines.append(f"| {_cell(check.title)} | {check.requirement or '—'} | " + " | ".join(cells) + " |")
         lines.append("")
+
+    if run_errors:
+        lines += ["### ❌ Run errors (outside any check)", ""]
+        for error in run_errors:
+            fence = "````" if "```" in error else "```"
+            lines += [fence, error, fence, ""]
 
     for check in checks:
         lines += [f"### {STATUS[check.status].split()[0]} {_cell(check.title)}", ""]
@@ -254,9 +278,12 @@ def main(argv: list[str] | None = None) -> int:
         comment = render_not_run(f"`{args.results}` is not valid JSON ({exc}).", run_url=args.run_url, sha=args.sha)
     else:
         checks = read_checks(report, require_guard=args.require_guard)
+        run_errors = read_run_errors(report)
         names = copy_shots(checks, args.out / "shots")
-        comment = render(checks, names, image_base=args.image_base, run_url=args.run_url, sha=args.sha)
-        green = is_green(checks)
+        comment = render(
+            checks, names, image_base=args.image_base, run_url=args.run_url, sha=args.sha, run_errors=run_errors
+        )
+        green = is_green(checks, run_errors)
     (args.out / "comment.md").write_text(comment, encoding="utf-8")
     print(comment)
     return 1 if args.strict and not green else 0
