@@ -1,0 +1,44 @@
+# Changes to domain rules (tax, audit, accounting, legal), to the contract and
+# to the gates need the owner's `owner-approved` label. Separate from CI so
+# that adding a label re-runs only this check and never replaces a CI result.
+#
+# `pull_request_target` runs this file, the check script and the path list as
+# they are on the base branch, so a PR cannot weaken the gate that judges it.
+# It never executes code from the PR: the PR's commits are only fetched for
+# `git diff`. The workflow must be on main before the first PR it guards.
+name: Owner approval
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: owner-approval-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  owner-approval:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the base branch (trusted)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Fetch the PR's commits for the diff only
+        env:
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: git fetch --no-tags origin "+refs/pull/$NUMBER/head:refs/remotes/pr/head"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: python scripts/check_owner_approval.py --base "$BASE" --head "$HEAD" --labels "$LABELS"
