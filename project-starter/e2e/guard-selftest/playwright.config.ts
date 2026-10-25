@@ -13,6 +13,8 @@ export default defineConfig({
   outputDir: './test-results',
   // One worker: two checks log a server error on purpose, and the guard reads the log by time window.
   workers: 1,
+  // A stray test.only() would run just one check and hide the others.
+  forbidOnly: !!process.env.CI,
   retries: 0,
   reporter: [['list']],
   use: {
