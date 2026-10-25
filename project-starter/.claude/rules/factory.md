@@ -8,8 +8,13 @@ This file has no `paths:` on purpose. Cloud threads in a claude.ai project load 
 2. **Tickets.** Split `plan.md` into GitHub issues (`to-tickets`), one per independently mergeable slice, each naming the R-IDs it covers. Independent issues run as parallel threads, one branch each.
 3. **Build.** Test first (`mattpocock-skills:tdd`). One PR per issue; fill the PR template, including `Requirements: R…`.
 4. **Check.** The required checks (`checks`, `acceptance`, `owner-approval`) must be green. Codex reviews every PR automatically: fix its findings or answer them on the thread, then resolve the conversation. A project with a web UI also gets `browser-qa`: browser checks with screenshots posted on the PR (`.claude/rules/browser-qa.md`). A bug you cannot fix in 3 attempts: comment `@codex fix <what is failing>` on the PR, then re-run the checks on its commit yourself.
-5. **Merge.** Enable auto-merge (squash) on the PR; GitHub merges it when every required check is green. Never merge by hand, never bypass a required check.
-6. **Owner gate.** A PR that changes a path in `.github/owner-approval-paths.txt` (domain rules: tax, accounting, audit, legal; the contract; the gates) fails `owner-approval` until the owner adds the `owner-approved` label. Never add that label yourself. Tell the owner in the thread, in Romanian, in one line, which files need their look.
+5. **Merge.** Projects are private repos on GitHub Free (owner's rule, 2026-10-25), so there is no branch protection and no auto-merge.
+   - Merge the PR yourself (squash) only when `checks`, `acceptance` and `owner-approval` are all green on its last commit, its conversations are resolved and Codex has no open P0/P1.
+   - Never merge on red or pending, and never push to `main`.
+   - Where the repo does have branch protection (GitHub Pro), enable auto-merge instead.
+6. **Owner gate.** A PR that changes a path in `.github/owner-approval-paths.txt` (domain rules: tax, accounting, audit, legal; the contract; the gates) fails `owner-approval` until it has the `owner-approved` label. Who adds it (`AGENTS.md` → Safety):
+   - **Domain paths** (tax, accounting, audit, legal; the contract; `CLAUDE.md`): only the owner. Tell them in the thread, in Romanian, in one line, which files need their look.
+   - **Factory paths only** (CI, gates, agent rules): add it yourself once CI is green and Codex has no open P0/P1, without messaging the owner.
 
 ## Never
 
