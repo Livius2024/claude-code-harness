@@ -1,0 +1,93 @@
+# Proves the starter's browser QA end to end on this repository's own PRs:
+# copies project-starter/e2e and its scripts next to a demo page
+# (tests/browser_qa_demo), turns browser QA on, runs it, and posts the
+# screenshots on the PR the same way a project's browser-qa.yml does.
+name: Browser QA self-test
+
+on:
+  pull_request:
+    paths:
+      - project-starter/e2e/**
+      - project-starter/scripts/browser_qa_*
+      - project-starter/.github/workflows/browser-qa.yml
+      - tests/browser_qa_demo/**
+      - .github/workflows/browser-qa-selftest.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-qa-selftest-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  browser-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build a demo project from the starter
+        run: |
+          demo="$RUNNER_TEMP/demo"
+          mkdir -p "$demo"
+          cp -r project-starter/e2e project-starter/scripts "$demo/"
+          cp -r tests/browser_qa_demo "$demo/site"
+          mv "$demo/e2e/playwright.config.example.ts" "$demo/e2e/playwright.config.ts"
+          cp tests/browser_qa_demo/*.spec.ts "$demo/e2e/tests/"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright and Chromium
+        working-directory: ${{ runner.temp }}/demo/e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Run the browser checks
+        working-directory: ${{ runner.temp }}/demo/e2e
+        env:
+          START_COMMAND: python3 -m http.server 8000 --bind 127.0.0.1 --directory site
+        run: npx playwright test
+      - name: Write the PR comment
+        if: always()
+        working-directory: ${{ runner.temp }}/demo
+        env:
+          IMAGE_BASE: ${{ github.server_url }}/${{ github.repository }}/blob/browser-qa-screenshots/pr-${{ github.event.pull_request.number }}/${{ github.run_id }}-${{ github.run_attempt }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: >-
+          python3 scripts/browser_qa_comment.py --results e2e/results.json --out qa-out
+          --image-base "$IMAGE_BASE" --run-url "$RUN_URL" --sha "$SHA"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-qa
+          path: |
+            ${{ runner.temp }}/demo/qa-out/
+            ${{ runner.temp }}/demo/e2e/report/
+            ${{ runner.temp }}/demo/e2e/test-results/
+          retention-days: 14
+
+  publish:
+    needs: browser-qa
+    if: "!cancelled() && github.event.pull_request.head.repo.full_name == github.repository"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: project-starter/scripts
+      - uses: actions/download-artifact@v4
+        with:
+          name: browser-qa
+          path: browser-qa
+      - name: Post the screenshots on the PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          RUN_KEY: ${{ github.run_id }}-${{ github.run_attempt }}
+          SRC: browser-qa/qa-out
+        run: bash project-starter/scripts/browser_qa_publish.sh

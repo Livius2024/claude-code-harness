@@ -1,0 +1,117 @@
+# Browser QA for projects with a web UI: starts the app, runs the Playwright
+# checks in e2e/ at desktop and phone size, and posts the result with one
+# screenshot per check and size as a comment on the PR (plus the full report
+# as the `browser-qa` artifact). Off until e2e/playwright.config.ts exists
+# (e2e/README.md); until then `browser-qa` passes without doing anything, so
+# it can be a required check in any project.
+name: Browser QA
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-qa-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # Runs the PR's code, so it gets a read-only token.
+  browser-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      enabled: ${{ steps.detect.outputs.enabled }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Is browser QA on?
+        id: detect
+        run: |
+          if [ -f e2e/playwright.config.ts ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Browser QA is off: no e2e/playwright.config.ts (see e2e/README.md)."
+          fi
+
+      # The app's own stack, so the start command in playwright.config.ts runs.
+      - uses: astral-sh/setup-uv@v6
+        if: steps.detect.outputs.enabled == 'true' && hashFiles('pyproject.toml') != ''
+      - name: Install the app (Python)
+        if: steps.detect.outputs.enabled == 'true' && hashFiles('pyproject.toml') != ''
+        run: uv sync
+      - uses: pnpm/action-setup@v4
+        if: steps.detect.outputs.enabled == 'true' && hashFiles('pnpm-lock.yaml') != ''
+      - uses: actions/setup-node@v4
+        if: steps.detect.outputs.enabled == 'true'
+        with:
+          node-version: 22
+      - name: Install the app (Node)
+        if: steps.detect.outputs.enabled == 'true' && hashFiles('package.json') != ''
+        run: |
+          if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile
+          elif [ -f package-lock.json ]; then npm ci
+          else npm install; fi
+      - name: Project setup (e2e/setup.sh)
+        if: steps.detect.outputs.enabled == 'true' && hashFiles('e2e/setup.sh') != ''
+        run: bash e2e/setup.sh
+
+      - name: Install Playwright and Chromium
+        if: steps.detect.outputs.enabled == 'true'
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Run the browser checks
+        if: steps.detect.outputs.enabled == 'true'
+        working-directory: e2e
+        run: npx playwright test
+
+      - name: Write the PR comment
+        if: always() && steps.detect.outputs.enabled == 'true'
+        env:
+          IMAGE_BASE: ${{ github.server_url }}/${{ github.repository }}/blob/browser-qa-screenshots/pr-${{ github.event.pull_request.number }}/${{ github.run_id }}-${{ github.run_attempt }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: >-
+          python3 scripts/browser_qa_comment.py --results e2e/results.json --out qa-out
+          --image-base "$IMAGE_BASE" --run-url "$RUN_URL" --sha "$SHA"
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.detect.outputs.enabled == 'true'
+        with:
+          name: browser-qa
+          path: |
+            qa-out/
+            e2e/report/
+            e2e/test-results/
+          retention-days: 14
+
+  # Publishes what the first job produced; it runs no code from e2e/. Skipped
+  # for PRs from forks, whose token cannot write.
+  publish:
+    needs: browser-qa
+    if: >-
+      !cancelled() && needs.browser-qa.outputs.enabled == 'true'
+      && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+      - uses: actions/download-artifact@v4
+        with:
+          name: browser-qa
+          path: browser-qa
+      - name: Post the screenshots on the PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          RUN_KEY: ${{ github.run_id }}-${{ github.run_attempt }}
+          SRC: browser-qa/qa-out
+        run: bash scripts/browser_qa_publish.sh

@@ -9,6 +9,7 @@ Requirements: <R1, R2>
 
 - [ ] Tests, types and lint pass in CI (`checks`)
 - [ ] `ACCEPTANCE.md` rows for the requirements above are updated with the real result on this SHA (`acceptance`)
+- [ ] Changes a screen? Browser checks ran locally (`e2e/`), and the `browser-qa` screenshots on this PR look right at desktop and phone size
 - [ ] Touches an owner-only path (`.github/owner-approval-paths.txt`)? Then it waits for the owner's `owner-approved` label
 
 ## Not verified

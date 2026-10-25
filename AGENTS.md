@@ -15,6 +15,8 @@ The factory template for the owner's projects (Python apps for financial audit, 
 | Type check | `uv run pyright` |
 | Lint / format | `uv run ruff check . && uv run ruff format --check .` |
 | Workflow lint | `actionlint .github/workflows/*.yml project-starter/.github/workflows/*.yml` |
+| Shell lint | `shellcheck project-starter/scripts/*.sh` |
+| Browser QA end to end | `.github/workflows/browser-qa-selftest.yml` (on PRs touching it; posts screenshots of a demo page) |
 
 CI (`.github/workflows/ci.yml`) runs all of them on every PR.
 
