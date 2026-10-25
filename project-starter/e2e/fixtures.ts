@@ -16,6 +16,27 @@ const SERVER_ERROR = new RegExp(
     String.raw`Traceback \(most recent call last\)|\b(ERROR|CRITICAL|FATAL)\b|Unhandled(Promise)?Rejection|Exception occurred|^panic:`,
   'm',
 );
+// The app's own origins: BASE_URL's, any local host (a UI and its API often
+// listen on different local ports, e.g. Next.js on 3000 and FastAPI on 8000),
+// plus APP_ORIGINS (comma-separated) for an API on another host.
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
+const EXTRA_ORIGINS = (process.env.APP_ORIGINS ?? '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean)
+  .map((origin) => new URL(origin).origin);
+
+function isAppUrl(url: string, baseOrigin: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+  return parsed.origin === baseOrigin || LOCAL_HOSTS.has(parsed.hostname) || EXTRA_ORIGINS.includes(parsed.origin);
+}
+
 // Servers often log a failure just after sending the response.
 const SETTLE_MS = 300;
 
@@ -49,7 +70,7 @@ export const test = base.extend<Options & { backendGuard: void }>({
     async ({ context, baseURL, allowedHttpErrors }, use, testInfo) => {
       const origin = baseURL ? new URL(baseURL).origin : '';
       const watched = (url: string) =>
-        (!origin || url.startsWith(origin)) && !allowedHttpErrors.some((pattern) => pattern.test(url));
+        isAppUrl(url, origin) && !allowedHttpErrors.some((pattern) => pattern.test(url));
       const failedRequests: string[] = [];
       // On the whole browser context, so popups and extra tabs are watched too.
       context.on('response', (response) => {

@@ -20,6 +20,15 @@ test.describe('guard', () => {
     await answered;
   });
 
+  test('a failed call to the API on another local origin fails the check too', async ({ page, baseURL }) => {
+    // Apps whose UI and API listen on different ports (Next.js + FastAPI).
+    test.fail();
+    const api = baseURL!.replace('127.0.0.1', 'localhost');
+    const answered = page.waitForResponse('**/api/missing');
+    await page.goto(`/invoices.html?call=${encodeURIComponent(`${api}/api/missing`)}`);
+    await answered;
+  });
+
   test('an error in the server log fails the check, even with HTTP 200', async ({ page }) => {
     test.fail();
     const answered = page.waitForResponse('**/api/warn');
