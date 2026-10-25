@@ -17,6 +17,8 @@ A screenshot shows only the screen. Every check imports `test` and `expect` from
 - a request from the page to the app failed: HTTP 4xx/5xx, or no answer at all;
 - the app's server log shows an error. The config sends the output of `START_COMMAND` to `e2e/server.log`; an error is a line matching `Traceback (most recent call last)`, `ERROR`, `CRITICAL`, `FATAL`, `UnhandledPromiseRejection`, `Exception occurred` or `panic:`. A project whose server logs errors another way sets `SERVER_LOG_ERRORS` (a regex) in the workflow.
 
+`fixtures.ts`, `server-log.ts` and `playwright.config.ts` are in `.github/owner-approval-paths.txt`: a PR that changes the guard needs the `owner-approved` label.
+
 A check that expects a failure on purpose (a wrong password, a 404 page) lists it: `test.use({ allowedHttpErrors: [/\/api\/login$/] })`. The server log is read by time window, so with parallel checks an error may be reported on a neighbouring check; the run is red either way, and `npx playwright test --workers=1` shows which one caused it.
 
 ## Write a check per requirement

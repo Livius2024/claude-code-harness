@@ -23,3 +23,7 @@ scripts/check_acceptance.py
 scripts/check_owner_approval.py
 scripts/check_e2e_guard.py
 scripts/browser_qa_comment.py
+# The backend guard every browser check runs through (e2e/README.md)
+e2e/fixtures.ts
+e2e/server-log.ts
+e2e/playwright.config.ts
