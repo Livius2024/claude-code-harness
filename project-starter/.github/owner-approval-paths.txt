@@ -1,5 +1,5 @@
 # Paths only the owner approves. A PR that changes one of them needs the
-# `owner-approved` label before CI passes and auto-merge can merge it.
+# `owner-approved` label before `owner-approval` passes and the PR can be merged.
 # One glob per line; `dir/**` = everything under dir. Adjust to the project.
 
 # Domain rules: tax, audit, accounting, legal

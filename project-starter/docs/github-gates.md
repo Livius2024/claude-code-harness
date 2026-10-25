@@ -1,6 +1,6 @@
-# Porțile GitHub ale fabricii (branch protection + auto-merge)
+# Porțile GitHub ale fabricii (verificări obligatorii, merge pe verde)
 
-În firele (threads) unui proiect claude.ai nu rulează hook-uri, `settings.json` sau skill-uri din repo. De aceea tot ce nu are voie agentul să sară stă în GitHub. Agentul deschide PR-ul și pornește auto-merge; GitHub îl unește singur doar când toate verificările obligatorii sunt verzi.
+În firele (threads) unui proiect claude.ai nu rulează hook-uri, `settings.json` sau skill-uri din repo. De aceea tot ce nu are voie agentul să sară stă în GitHub. Agentul deschide PR-ul gata de review (nu draft: Codex nu revizuiește drafturile) și îl unește singur, cu squash, doar când toate verificările obligatorii sunt verzi. Pe un repo cu GitHub Pro face asta auto-merge.
 
 | Poartă | Unde | Ce oprește |
 |---|---|---|
@@ -9,7 +9,7 @@
 | `owner-approval` | `.github/workflows/owner-approval.yml` + `.github/owner-approval-paths.txt` | Un PR care atinge reguli fiscale/audit/contabile/legale, contractul (`spec.md`, `plan.md`, `AGENTS.md`) sau porțile, până pui tu eticheta `owner-approved` |
 | `browser-qa` (opțional) | `.github/workflows/browser-qa.yml` + `e2e/` | Un ecran care nu se deschide sau nu arată ce cere `ACCEPTANCE.md`, la desktop și pe telefon. Pune pe PR un comentariu cu capturi de ecran. Oprit până există `e2e/playwright.config.ts` |
 | Review Codex | chatgpt.com → Settings → Code review (automatic) | Constatări P0/P1 după `## Code Review Rules` din `AGENTS.md`; PR-ul nu se unește până nu sunt rezolvate conversațiile |
-| Protecția ramurii `main` | `.github/branch-protection.json` | Push direct, force-push, ștergere; merge fără cele 3 verificări verzi sau cu conversații nerezolvate |
+| Protecția ramurii `main` | `.github/branch-protection.json` | Push direct, force-push, ștergere; merge fără cele 3 verificări verzi sau cu conversații nerezolvate. Doar pe GitHub Pro; pe repo-urile private Free regula o respectă agentul |
 
 ## Pornire (o singură dată pe repo, ~2 minute)
 
