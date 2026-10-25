@@ -1,4 +1,5 @@
 import { expect, test } from '../fixtures';
+import { SELFTEST_API_ORIGIN } from './origins';
 
 // Each check marked test.fail() passes only if the guard in ../fixtures.ts
 // fails it, so a broken guard turns this self-test red. The other checks are
@@ -28,6 +29,24 @@ test('a refused connection to a local port fails the check', async ({ page }) =>
 test('a failed call to the API on another local origin fails the check', async ({ page, baseURL }) => {
   test.fail();
   await open(page, `${baseURL!.replace('127.0.0.1', 'localhost')}/api/missing`);
+});
+
+// Hosts that are not local are answered by routing: HTTP 503, readable from the page.
+async function answer503(context, origin: string) {
+  await context.route(`${origin}/**`, (route) =>
+    route.fulfill({ status: 503, body: '{}', headers: { 'Access-Control-Allow-Origin': '*' } }),
+  );
+}
+
+test('a failed call to an API origin listed in APP_ORIGINS fails the check', async ({ page, context }) => {
+  test.fail();
+  await answer503(context, SELFTEST_API_ORIGIN);
+  await open(page, `${SELFTEST_API_ORIGIN}/api/down`);
+});
+
+test('control: a failed call to a host that is not the app passes', async ({ page, context }) => {
+  await answer503(context, 'http://third-party.guard-selftest.test');
+  await open(page, 'http://third-party.guard-selftest.test/api/down');
 });
 
 test('a failed call in a second tab fails the check', async ({ context, baseURL }) => {

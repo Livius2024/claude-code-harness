@@ -3,8 +3,10 @@
 // changes (.github/workflows/browser-qa-guard.yml).
 import { defineConfig, devices } from '@playwright/test';
 import { SERVER_LOG } from '../server-log';
+import { SELFTEST_API_ORIGIN } from './origins';
 
 const PORT = 8799;
+process.env.APP_ORIGINS = SELFTEST_API_ORIGIN;
 
 export default defineConfig({
   testDir: '.',
