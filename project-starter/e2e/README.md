@@ -14,7 +14,7 @@ It is **off** until `e2e/playwright.config.ts` exists. Until then the `browser-q
 
 A screenshot shows only the screen. Every check imports `test` and `expect` from `fixtures.ts`, never from Playwright directly or through a helper. CI makes sure twice: `scripts/check_e2e_guard.py` fails on any other Playwright import under `e2e/`, and the PR comment marks a check that ran without the guard as `❌ FAIL (no backend guard)`. Each check then also fails when, while it ran:
 
-- a request from the page to the app failed: HTTP 4xx/5xx, or no answer at all;
+- a request to the app from any page or tab of the check failed: HTTP 4xx/5xx, or no answer at all;
 - the app's server log shows an error. The config sends the output of `START_COMMAND` to `e2e/server.log`; an error is a line matching `Traceback (most recent call last)`, `ERROR`, `CRITICAL`, `FATAL`, `UnhandledPromiseRejection`, `Exception occurred` or `panic:`. A project whose server logs errors another way sets `SERVER_LOG_ERRORS` (a regex) in the workflow.
 
 `fixtures.ts`, `server-log.ts` and `playwright.config.ts` are in `.github/owner-approval-paths.txt`: a PR that changes the guard needs the `owner-approved` label.

@@ -1,7 +1,7 @@
 // Every check imports `test` and `expect` from here, not from '@playwright/test'
 // (CI runs scripts/check_e2e_guard.py to make sure). On top of what the check
 // asserts on the screen, each check then also fails when, while it ran:
-// - a request to the app failed: HTTP 4xx/5xx or no response at all;
+// - a request to the app from any page or tab failed: HTTP 4xx/5xx or no response at all;
 // - the app's server log (the output of START_COMMAND) shows an error.
 // A screenshot shows only the screen; these catch the backend failing behind it.
 import { closeSync, existsSync, openSync, readSync, statSync } from 'node:fs';
@@ -46,17 +46,18 @@ export const test = base.extend<Options & { backendGuard: void }>({
   allowedHttpErrors: [[], { option: true }],
 
   backendGuard: [
-    async ({ page, baseURL, allowedHttpErrors }, use, testInfo) => {
+    async ({ context, baseURL, allowedHttpErrors }, use, testInfo) => {
       const origin = baseURL ? new URL(baseURL).origin : '';
       const watched = (url: string) =>
         (!origin || url.startsWith(origin)) && !allowedHttpErrors.some((pattern) => pattern.test(url));
       const failedRequests: string[] = [];
-      page.on('response', (response) => {
+      // On the whole browser context, so popups and extra tabs are watched too.
+      context.on('response', (response) => {
         if (response.status() >= 400 && watched(response.url())) {
           failedRequests.push(`HTTP ${response.status()} ${response.request().method()} ${response.url()}`);
         }
       });
-      page.on('requestfailed', (request) => {
+      context.on('requestfailed', (request) => {
         const reason = request.failure()?.errorText ?? 'failed';
         // A navigation cancels the previous page's pending requests; that is not a backend error.
         if (!reason.includes('ERR_ABORTED') && watched(request.url())) {

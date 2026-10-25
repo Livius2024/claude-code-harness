@@ -12,6 +12,14 @@ test.describe('guard', () => {
     await answered;
   });
 
+  test('a failed API call in a second tab fails the check too', async ({ context }) => {
+    test.fail();
+    const tab = await context.newPage();
+    const answered = tab.waitForResponse('**/api/missing');
+    await tab.goto('/invoices.html?call=/api/missing');
+    await answered;
+  });
+
   test('an error in the server log fails the check, even with HTTP 200', async ({ page }) => {
     test.fail();
     const answered = page.waitForResponse('**/api/warn');
