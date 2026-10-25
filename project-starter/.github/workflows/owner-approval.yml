@@ -29,10 +29,16 @@ jobs:
           ref: ${{ github.event.pull_request.base.sha }}
           fetch-depth: 0
           persist-credentials: false
+      # The read-only token goes to this one command only (never written to
+      # .git/config), so a private repository can be fetched.
       - name: Fetch the PR's commits for the diff only
         env:
           NUMBER: ${{ github.event.pull_request.number }}
-        run: git fetch --no-tags origin "+refs/pull/$NUMBER/head:refs/remotes/pr/head"
+          TOKEN: ${{ github.token }}
+        run: |
+          auth="$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)"
+          git -c http.extraheader="AUTHORIZATION: basic $auth" \
+            fetch --no-tags origin "+refs/pull/$NUMBER/head:refs/remotes/pr/head"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
