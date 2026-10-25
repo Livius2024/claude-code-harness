@@ -46,7 +46,7 @@ export const test = base.extend<Options & { backendGuard: void }>({
   allowedHttpErrors: [[], { option: true }],
 
   backendGuard: [
-    async ({ page, baseURL, allowedHttpErrors }, use) => {
+    async ({ page, baseURL, allowedHttpErrors }, use, testInfo) => {
       const origin = baseURL ? new URL(baseURL).origin : '';
       const watched = (url: string) =>
         (!origin || url.startsWith(origin)) && !allowedHttpErrors.some((pattern) => pattern.test(url));
@@ -66,6 +66,7 @@ export const test = base.extend<Options & { backendGuard: void }>({
       if (process.env.CI && !existsSync(SERVER_LOG)) {
         throw new Error(`The server log ${SERVER_LOG} is missing: the app's output is not being checked.`);
       }
+      testInfo.annotations.push({ type: 'backend-guard', description: 'requests and server log checked' });
       const logStart = logSize();
 
       await use();

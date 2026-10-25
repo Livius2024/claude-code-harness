@@ -47,3 +47,30 @@ def test_missing_fixtures_file_fails(tmp_path, capsys):
 def test_the_starter_itself_passes():
     starter = Path(__file__).resolve().parent.parent / "project-starter"
     assert main(["--root", str(starter)]) == 0
+
+
+def test_a_helper_that_re_exports_playwrights_test_fails(tmp_path, capsys):
+    # Codex P0 on PR #8: a spec importing `test` from a helper outside e2e/tests.
+    fixtures(tmp_path)
+    (tmp_path / "e2e" / "plain-test.ts").write_text("export { test } from '@playwright/test';\n", encoding="utf-8")
+    (tmp_path / "e2e" / "lib").mkdir()
+    (tmp_path / "e2e" / "lib" / "deep.ts").write_text("import { test } from 'playwright/test';\n", encoding="utf-8")
+    spec(tmp_path, "r6.spec.ts", "import { test } from '../plain-test';\n")
+    assert main(["--root", str(tmp_path)]) == 1
+    out = capsys.readouterr().out
+    assert "e2e/plain-test.ts" in out and "e2e/lib/deep.ts" in out
+
+
+def test_the_config_fixtures_and_installed_packages_may_import_playwright(tmp_path):
+    fixtures(tmp_path)
+    (tmp_path / "e2e" / "fixtures.ts").write_text(
+        "import { test as base } from '@playwright/test';\n", encoding="utf-8"
+    )
+    (tmp_path / "e2e" / "playwright.config.ts").write_text(
+        "import { defineConfig } from '@playwright/test';\n", encoding="utf-8"
+    )
+    module = tmp_path / "e2e" / "node_modules" / "@playwright" / "test" / "index.js"
+    module.parent.mkdir(parents=True)
+    module.write_text("module.exports = require('playwright/test');\n", encoding="utf-8")
+    spec(tmp_path, "smoke.spec.ts", "import { test } from '../fixtures';\n")
+    assert main(["--root", str(tmp_path)]) == 0

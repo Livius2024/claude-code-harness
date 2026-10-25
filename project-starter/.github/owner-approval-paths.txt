@@ -22,3 +22,4 @@ CLAUDE.md
 scripts/check_acceptance.py
 scripts/check_owner_approval.py
 scripts/check_e2e_guard.py
+scripts/browser_qa_comment.py

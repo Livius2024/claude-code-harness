@@ -186,3 +186,56 @@ def test_strict_fails_unless_every_check_ran_and_passed(tmp_path):
     run(tmp_path, skipped, "--strict", code=1)
     run(tmp_path, failed, "--strict", code=1)
     run(tmp_path, None, "--strict", code=1)
+
+
+GUARD = [{"type": "backend-guard", "description": "requests and server log checked"}]
+
+
+def guarded(status, annotations=GUARD):
+    out = result(status)
+    out["annotations"] = list(annotations)
+    return out
+
+
+def test_require_guard_fails_a_passing_check_that_did_not_run_the_backend_guard(tmp_path):
+    # A spec that imports `test` from Playwright directly (or through a helper)
+    # never runs e2e/fixtures.ts, so its result carries no backend-guard annotation.
+    data = report(
+        file_suite(
+            "r1.spec.ts",
+            specs=[
+                {"title": "R1 guarded", "tests": [pw_test("desktop", "expected", [guarded("passed")])]},
+                {"title": "R2 unguarded", "tests": [pw_test("desktop", "expected", [result("passed")])]},
+            ],
+        )
+    )
+    comment = run(tmp_path, data, "--require-guard", "--strict", code=1)
+    assert "## ❌ Browser QA" in comment
+    assert "| R1 guarded | R1 | ✅ PASS |" in comment
+    assert "| R2 unguarded | R2 | ❌ FAIL (no backend guard) |" in comment
+    assert "e2e/fixtures.ts" in comment
+
+
+def test_require_guard_accepts_guarded_checks_and_expected_failures(tmp_path):
+    fail_marker = {"type": "fail"}
+    data = report(
+        file_suite(
+            "guard.spec.ts",
+            specs=[
+                {"title": "smoke ok", "tests": [pw_test("desktop", "expected", [guarded("passed")])]},
+                {
+                    "title": "guard fails on purpose",
+                    "tests": [pw_test("desktop", "expected", [guarded("failed", [*GUARD, fail_marker])])],
+                },
+            ],
+        )
+    )
+    comment = run(tmp_path, data, "--require-guard", "--strict", code=0)
+    assert "## ✅ Browser QA" in comment
+
+
+def test_without_require_guard_annotations_are_not_needed(tmp_path):
+    data = report(
+        file_suite("a.spec.ts", specs=[{"title": "R1", "tests": [pw_test("desktop", "expected", [result("passed")])]}])
+    )
+    run(tmp_path, data, "--strict", code=0)

@@ -87,7 +87,7 @@ jobs:
           SHA: ${{ github.event.pull_request.head.sha }}
         run: >-
           python3 scripts/browser_qa_comment.py --results e2e/results.json --out qa-out
-          --image-base "$IMAGE_BASE" --run-url "$RUN_URL" --sha "$SHA" --strict
+          --image-base "$IMAGE_BASE" --run-url "$RUN_URL" --sha "$SHA" --strict --require-guard
       - uses: actions/upload-artifact@v4
         if: always() && steps.detect.outputs.enabled == 'true'
         with:
