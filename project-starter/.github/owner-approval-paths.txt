@@ -21,3 +21,4 @@ CLAUDE.md
 .github/**
 scripts/check_acceptance.py
 scripts/check_owner_approval.py
+scripts/check_e2e_guard.py

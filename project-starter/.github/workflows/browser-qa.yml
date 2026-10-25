@@ -71,6 +71,9 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium
+      - name: Every check uses the backend guard (e2e/fixtures.ts)
+        if: steps.detect.outputs.enabled == 'true'
+        run: python3 scripts/check_e2e_guard.py
       - name: Run the browser checks
         if: steps.detect.outputs.enabled == 'true'
         working-directory: e2e

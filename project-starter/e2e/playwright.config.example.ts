@@ -3,6 +3,7 @@
 // CI (.github/workflows/browser-qa.yml) then runs it on every PR and posts the
 // screenshots to the PR.
 import { defineConfig, devices } from '@playwright/test';
+import { SERVER_LOG } from './server-log';
 
 // Starts the app from the repository root; BASE_URL is where it listens.
 const START_COMMAND = process.env.START_COMMAND ?? '<e.g. uv run uvicorn app.main:app --port 8000>';
@@ -32,7 +33,8 @@ export default defineConfig({
     { name: 'phone', use: { ...devices['Pixel 7'] } },
   ],
   webServer: {
-    command: START_COMMAND,
+    // The app's output goes to e2e/server.log, which fixtures.ts reads for errors.
+    command: `(${START_COMMAND}) > "${SERVER_LOG}" 2>&1`,
     cwd: '..',
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
