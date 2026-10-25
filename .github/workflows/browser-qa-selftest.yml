@@ -1,7 +1,9 @@
 # Proves the starter's browser QA end to end on this repository's own PRs:
-# copies project-starter/e2e and its scripts next to a demo page
-# (tests/browser_qa_demo), turns browser QA on, runs it, and posts the
-# screenshots on the PR the same way a project's browser-qa.yml does.
+# copies project-starter/e2e and its scripts next to a demo app
+# (tests/browser_qa_demo: pages plus a small JSON API), turns browser QA on,
+# runs it, and posts the screenshots on the PR the same way a project's
+# browser-qa.yml does. Its guard checks prove the backend guard in
+# e2e/fixtures.ts fails a check on a failed request or a server-log error.
 name: Browser QA self-test
 
 on:
@@ -9,6 +11,7 @@ on:
     paths:
       - project-starter/e2e/**
       - project-starter/scripts/browser_qa_*
+      - project-starter/scripts/check_e2e_guard.py
       - project-starter/.github/workflows/browser-qa.yml
       - tests/browser_qa_demo/**
       - .github/workflows/browser-qa-selftest.yml
@@ -34,6 +37,9 @@ jobs:
           cp -r tests/browser_qa_demo "$demo/site"
           mv "$demo/e2e/playwright.config.example.ts" "$demo/e2e/playwright.config.ts"
           cp tests/browser_qa_demo/*.spec.ts "$demo/e2e/tests/"
+      - name: Every check uses the backend guard (e2e/fixtures.ts)
+        working-directory: ${{ runner.temp }}/demo
+        run: python3 scripts/check_e2e_guard.py
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -45,8 +51,10 @@ jobs:
       - name: Run the browser checks
         working-directory: ${{ runner.temp }}/demo/e2e
         env:
-          START_COMMAND: python3 -m http.server 8000 --bind 127.0.0.1 --directory site
-        run: npx playwright test
+          START_COMMAND: python3 -u site/server.py 8000
+        # One worker: the guard checks log a server error on purpose, and a
+        # parallel check would see it too (the guard reads the log by time window).
+        run: npx playwright test --workers=1
       - name: Write the PR comment
         if: always()
         working-directory: ${{ runner.temp }}/demo
@@ -56,7 +64,7 @@ jobs:
           SHA: ${{ github.event.pull_request.head.sha }}
         run: >-
           python3 scripts/browser_qa_comment.py --results e2e/results.json --out qa-out
-          --image-base "$IMAGE_BASE" --run-url "$RUN_URL" --sha "$SHA" --strict
+          --image-base "$IMAGE_BASE" --run-url "$RUN_URL" --sha "$SHA" --strict --require-guard
       - uses: actions/upload-artifact@v4
         if: always()
         with:

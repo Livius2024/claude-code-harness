@@ -1,6 +1,7 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../fixtures';
 
 // The home page opens with no server error and no browser console error.
+// fixtures.ts adds the backend side: no failed request, no error in the server log.
 // Each requirement with a screen gets its own spec next to this one, titled
 // with its R-ID ("R3 shows the VAT total per month"), so the PR comment maps
 // every screenshot to its row in ACCEPTANCE.md.

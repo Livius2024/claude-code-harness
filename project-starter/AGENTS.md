@@ -95,7 +95,7 @@ What this product must always do or never do, whatever the speed or cost trade-o
 - No force-push, history rewrite, `reset --hard`, or push to `main`. Everything reaches `main` through a PR with green required checks.
 - The `owner-approved` label:
   - **Owner only** on domain paths: `spec.md`, `plan.md`, `CLAUDE.md`, `docs/domain/**`, tax, fiscal and audit-rule files.
-  - **You may add it** when every protected path in the PR is a factory path (`.github/**`, `.claude/**`, `AGENTS.md`, `scripts/check_*.py`), CI is green and Codex has no open P0/P1.
+  - **You may add it** when every protected path in the PR is a factory path (`.github/**`, `.claude/**`, `AGENTS.md`, `scripts/check_*.py`, `scripts/browser_qa_comment.py`, the e2e guard files `e2e/fixtures.ts`, `e2e/server-log.ts`, `e2e/playwright.config.ts`), CI is green and Codex has no open P0/P1.
   - Never when the PR removes a path from `.github/owner-approval-paths.txt` or weakens a check.
 - Never edit `.github/owner-approval-paths.txt`, CI, branch protection or the check scripts to get a PR through.
 - Never delete, skip or weaken a failing test to make the suite pass. Fix the code, or report why you can't.
@@ -120,6 +120,7 @@ Codex reads this section when it reviews a pull request. Flag as **P0** or **P1*
 - **P0** A test deleted, skipped (`skip`, `xfail`, `.only`, `xit`) or loosened, a CI step, required check or `.github/owner-approval-paths.txt` weakened, or an `ACCEPTANCE.md` criterion relaxed, in order to make something pass.
 - **P1** The PR does something no requirement in its `Requirements:` line asks for, or misses part of one (compare with `spec.md` and the linked issue). Flag drift from `plan.md` (stack, architecture, layout) too.
 - **P1** An `ACCEPTANCE.md` row set to PASS without a command that exercises the requirement, without this PR's SHA, or with evidence that does not show the result.
+- **P1** A browser check that imports from `@playwright/test` instead of `e2e/fixtures.ts`, weakens the guard in `e2e/fixtures.ts`, or widens `allowedHttpErrors`/`SERVER_LOG_ERRORS` beyond the failure it expects; a check of a requirement that saves or changes data that asserts only the screen, not the stored result (API or database).
 - **P1** New behaviour without a test that would fail if it broke; tests that only mirror the code's own output for money or tax values.
 - **P1** A schema change without a committed migration; a query or migration aimed at production.
 - **P1** User input reaching SQL, shell, file paths or HTML unescaped; a missing access check on another user's or company's data.

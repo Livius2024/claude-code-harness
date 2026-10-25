@@ -12,7 +12,10 @@ When the report is missing (the app did not start, Playwright crashed) the
 comment says NEVERIFICAT instead of pretending the checks passed, and so does
 a skipped check: only checks that ran and passed at every size are green.
 With --strict the script exits 1 unless the result is green, which is what
-fails the `browser-qa` job.
+fails the `browser-qa` job. With --require-guard a check that passed without
+the backend guard of e2e/fixtures.ts (its `backend-guard` annotation is
+missing, e.g. it imported `test` from Playwright directly or through a
+helper) counts as failed.
 
 --image-base is the URL the shots will be published under (CI pushes them to
 a branch); without it the comment links them relative to <out>, for local use.
@@ -35,10 +38,16 @@ R_ID_RE = re.compile(r"\b(R\d+)\b")
 STATUS = {
     "expected": "✅ PASS",
     "unexpected": "❌ FAIL",
+    "unguarded": "❌ FAIL (no backend guard)",
     "flaky": "⚠️ FLAKY",
     "skipped": "⏭️ NEVERIFICAT (skipped)",
 }
 ERROR_CHARS = 600
+GUARD_ANNOTATION = "backend-guard"
+UNGUARDED_ERROR = (
+    "This check ran without the backend guard (no `backend-guard` annotation): "
+    "import { test, expect } from e2e/fixtures.ts, not from @playwright/test."
+)
 
 
 @dataclass
@@ -71,7 +80,7 @@ class Check:
     def status(self) -> str:
         statuses = {run.status for run in self.runs}
         # A size that was skipped makes the check unverified, even if another passed.
-        for worst in ("unexpected", "flaky", "skipped"):
+        for worst in ("unexpected", "unguarded", "flaky", "skipped"):
             if worst in statuses:
                 return worst
         return "expected" if statuses else "skipped"
@@ -102,7 +111,12 @@ def _first_error(result: dict) -> str:
     return text[:ERROR_CHARS] + ("…" if len(text) > ERROR_CHARS else "")
 
 
-def read_checks(report: dict) -> list[Check]:
+def _guarded(test: dict, result: dict) -> bool:
+    annotations = result.get("annotations") or test.get("annotations") or []
+    return any(annotation.get("type") == GUARD_ANNOTATION for annotation in annotations)
+
+
+def read_checks(report: dict, *, require_guard: bool = False) -> list[Check]:
     # With fullyParallel the report repeats a spec once per project; merge them.
     checks: dict[tuple[str, str], Check] = {}
     for suite in report.get("suites", []):
@@ -114,6 +128,8 @@ def read_checks(report: dict) -> list[Check]:
                 run = Run(project=test.get("projectName", ""), status=test.get("status", "skipped"))
                 if run.status in ("unexpected", "flaky"):
                     run.error = _first_error(last)
+                if require_guard and run.status in ("expected", "flaky") and not _guarded(test, last):
+                    run.status, run.error = "unguarded", UNGUARDED_ERROR
                 for attachment in last.get("attachments", []):
                     if not attachment.get("contentType", "").startswith("image/"):
                         continue
@@ -221,6 +237,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--run-url", default="")
     parser.add_argument("--sha", default="")
     parser.add_argument("--strict", action="store_true", help="exit 1 unless every check ran and passed")
+    parser.add_argument(
+        "--require-guard", action="store_true", help="fail checks that ran without the e2e/fixtures.ts backend guard"
+    )
     args = parser.parse_args(argv)
 
     args.out.mkdir(parents=True, exist_ok=True)
@@ -234,7 +253,7 @@ def main(argv: list[str] | None = None) -> int:
     except json.JSONDecodeError as exc:
         comment = render_not_run(f"`{args.results}` is not valid JSON ({exc}).", run_url=args.run_url, sha=args.sha)
     else:
-        checks = read_checks(report)
+        checks = read_checks(report, require_guard=args.require_guard)
         names = copy_shots(checks, args.out / "shots")
         comment = render(checks, names, image_base=args.image_base, run_url=args.run_url, sha=args.sha)
         green = is_green(checks)

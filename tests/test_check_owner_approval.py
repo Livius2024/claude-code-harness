@@ -21,6 +21,12 @@ PATTERNS = read_patterns(STARTER / ".github" / "owner-approval-paths.txt")
         "src/app/vat_tax.py",
         "src/audit/rules/materiality.py",
         "scripts/check_acceptance.py",
+        # The backend guard of browser QA and the scripts that judge it (Codex P0, PR #8).
+        "scripts/check_e2e_guard.py",
+        "scripts/browser_qa_comment.py",
+        "e2e/fixtures.ts",
+        "e2e/server-log.ts",
+        "e2e/playwright.config.ts",
     ],
 )
 def test_protected_paths(path):
@@ -29,7 +35,14 @@ def test_protected_paths(path):
 
 @pytest.mark.parametrize(
     "path",
-    ["src/app/syntax.py", "src/app/invoices.py", "tests/test_import.py", "README.md", "ACCEPTANCE.md"],
+    [
+        "src/app/syntax.py",
+        "src/app/invoices.py",
+        "tests/test_import.py",
+        "README.md",
+        "ACCEPTANCE.md",
+        "e2e/tests/r1.spec.ts",
+    ],
 )
 def test_ordinary_paths(path):
     assert protected_changes([path], PATTERNS) == []

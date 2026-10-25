@@ -26,7 +26,7 @@ Firele (threads) unui proiect claude.ai încarcă din repo doar `CLAUDE.md`, `.c
 | PR-urile care ating reguli fiscale/audit sau contractul așteaptă eticheta ta `owner-approved`; pe cele care ating doar fabrica (CI, porți, reguli de agent) o pune agentul | `.github/workflows/owner-approval.yml`, `.github/owner-approval-paths.txt` |
 | Review Codex automat, P0/P1 | secțiunea `## Code Review Rules` din `AGENTS.md` |
 | `main` protejat, merge doar cu verificările verzi. Proiectele tale sunt private pe GitHub Free, deci regula o respectă agentul, nu GitHub | `.github/branch-protection.json` (pentru Pro), `.claude/rules/factory.md` |
-| QA în browser (aplicații web): verificări Playwright la desktop și telefon, capturi de ecran puse ca comentariu pe PR | `.github/workflows/browser-qa.yml`, `e2e/`, `.claude/rules/browser-qa.md` |
+| QA în browser (aplicații web): verificări Playwright la desktop și telefon, capturi de ecran puse ca comentariu pe PR; fiecare verificare pică și la o cerere API eșuată sau la o eroare în logul serverului, iar cerințele care salvează date verifică și ce s-a salvat | `.github/workflows/browser-qa.yml`, `e2e/`, `.claude/rules/browser-qa.md` |
 
 Pașii de pornire pe un repo (eticheta, merge-ul pe verde; protecția ramurii și auto-merge doar pe GitHub Pro) sunt în `project-starter/docs/github-gates.md`.
 
