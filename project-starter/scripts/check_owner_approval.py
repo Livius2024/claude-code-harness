@@ -49,12 +49,15 @@ def changed_files(base: str, head: str) -> list[str]:
     out = subprocess.run(
         # --no-renames: a rename must list its protected source path too, or
         # moving spec.md to other.md would slip past the gate.
-        ["git", "diff", "--name-only", "--no-renames", f"{base}...{head}"],
+        # -z: raw NUL-separated paths; otherwise git quotes and octal-escapes
+        # non-ASCII names and no pattern matches them.
+        ["git", "diff", "--name-only", "--no-renames", "-z", f"{base}...{head}"],
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
     ).stdout
-    return [line for line in out.splitlines() if line]
+    return [path for path in out.split("\0") if path]
 
 
 def main(argv: list[str] | None = None) -> int:
