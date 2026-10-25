@@ -20,7 +20,7 @@ Firele (threads) unui proiect claude.ai încarcă din repo doar `CLAUDE.md`, `.c
 
 | Poartă | Fișier în `project-starter/` |
 |---|---|
-| Fluxul fabricii (spec → tichete → PR → verificări → auto-merge), încărcat de orice fir | `.claude/rules/factory.md` |
+| Fluxul fabricii (spec → tichete → PR → verificări → merge pe verde), încărcat de orice fir | `.claude/rules/factory.md` |
 | Teste, tipuri, lint | `.github/workflows/ci.yml` (job `checks`) |
 | Fiecare cerință `R<n>` din `spec.md` are rând în `ACCEPTANCE.md` | `scripts/check_acceptance.py` (job `acceptance`) |
 | PR-urile care ating reguli fiscale/audit sau contractul așteaptă eticheta ta `owner-approved`; pe cele care ating doar fabrica (CI, porți, reguli de agent) o pune agentul | `.github/workflows/owner-approval.yml`, `.github/owner-approval-paths.txt` |
@@ -28,7 +28,7 @@ Firele (threads) unui proiect claude.ai încarcă din repo doar `CLAUDE.md`, `.c
 | `main` protejat, merge doar cu verificările verzi. Proiectele tale sunt private pe GitHub Free, deci regula o respectă agentul, nu GitHub | `.github/branch-protection.json` (pentru Pro), `.claude/rules/factory.md` |
 | QA în browser (aplicații web): verificări Playwright la desktop și telefon, capturi de ecran puse ca comentariu pe PR | `.github/workflows/browser-qa.yml`, `e2e/`, `.claude/rules/browser-qa.md` |
 
-Pașii de pornire pe un repo (auto-merge, eticheta, protecția ramurii) sunt în `project-starter/docs/github-gates.md`.
+Pașii de pornire pe un repo (eticheta, merge-ul pe verde; protecția ramurii și auto-merge doar pe GitHub Pro) sunt în `project-starter/docs/github-gates.md`.
 
 ## Skill-uri
 
@@ -181,7 +181,7 @@ La noi, skill-urile, hook-urile și MCP-urile sunt deja globale. De aceea mapa c
 | `.claude/rules/factory.md` | Fluxul fabricii; singura regulă fără `paths:`, deci încărcată și în firele din cloud |
 | `.github/workflows/ci.yml` | Teste, tipuri, lint, build + verificarea `ACCEPTANCE.md`; sare peste ce nu există încă |
 | `.github/workflows/owner-approval.yml`, `.github/owner-approval-paths.txt` | PR-urile pe reguli așteaptă eticheta ta `owner-approved` |
-| `.github/branch-protection.json`, `docs/github-gates.md` | Protecția lui `main` și auto-merge, cu pașii de pornire |
+| `.github/branch-protection.json`, `docs/github-gates.md` | Pașii de pornire și porțile; protecția lui `main` și auto-merge doar pe repo-uri cu GitHub Pro |
 | `.github/pull_request_template.md` | PR-ul spune ce cerințe (`R<n>`) acoperă |
 | `scripts/` | Verificările de mai sus, doar biblioteca standard Python |
 | `.gitignore` | Secrete, `.scratch/`, `HANDOFF.md` |

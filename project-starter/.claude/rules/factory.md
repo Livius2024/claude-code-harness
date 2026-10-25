@@ -1,15 +1,17 @@
 # Software factory rules (cloud threads)
 
-This file has no `paths:` on purpose. Cloud threads in a claude.ai project load `CLAUDE.md`, `.claude/CLAUDE.md` and the root `.claude/rules/*.md` without `paths:` only. Hooks, `.claude/settings.json`, repo skills and `.mcp.json` do NOT run there, so every gate that matters lives in GitHub: CI, branch protection, auto-merge and Codex review (`docs/github-gates.md`). Roles and definitions are in `AGENTS.md`.
+This file has no `paths:` on purpose. Cloud threads in a claude.ai project load `CLAUDE.md`, `.claude/CLAUDE.md` and the root `.claude/rules/*.md` without `paths:` only. Hooks, `.claude/settings.json`, repo skills and `.mcp.json` do NOT run there, so every gate that matters lives in GitHub: the CI checks, the Codex review and the merge-on-green rule below (`docs/github-gates.md`). Roles and definitions are in `AGENTS.md`.
+
+Skills in cloud threads: only the model-invoked Matt Pocock skills load there (`tdd`, `grilling`, `wizard`, `code-review`, `domain-modeling`, `diagnosing-bugs`, `codebase-design`, `research`, `prototype`, `writing-for-agents`, `resolving-merge-conflicts`). The user-invoked ones (`grill-with-docs`, `to-spec`, `to-tickets`, `implement-spec`, `handoff`, `retro`, `triage`) are not available, so the steps below name what to do by hand.
 
 ## The flow
 
-1. **Contract first.** No feature code before the owner approved `spec.md` and `plan.md`. Interview with `mattpocock-skills:grill-with-docs`, then `to-spec`: one question at a time, with a recommended answer. Every requirement goes in the `## Requirements` section of `spec.md` as `- R<n>: <owner's words>`, and gets a row with the same ID in `ACCEPTANCE.md`. CI (`scripts/check_acceptance.py`) fails while any ID lacks its row.
-2. **Tickets.** Split `plan.md` into GitHub issues (`to-tickets`), one per independently mergeable slice, each naming the R-IDs it covers. Independent issues run as parallel threads, one branch each.
-3. **Build.** Test first (`mattpocock-skills:tdd`). One PR per issue; fill the PR template, including `Requirements: R…`.
+1. **Contract first.** No feature code before the owner approved `spec.md` and `plan.md`. Interview with `mattpocock-skills:grilling`: one question at a time, with a recommended answer. Then write `spec.md` by hand in the to-spec shape (requirements, non-goals, domain rules with their source). Every requirement goes in the `## Requirements` section of `spec.md` as `- R<n>: <owner's words>`, and gets a row with the same ID in `ACCEPTANCE.md`. CI (`scripts/check_acceptance.py`) fails while any ID lacks its row.
+2. **Tickets.** Split `plan.md` into GitHub issues by hand, one per independently mergeable slice, each naming the R-IDs it covers. Independent issues run as parallel threads, one branch each.
+3. **Build.** Test first (`mattpocock-skills:tdd`). One PR per issue, opened ready for review, never as a draft: Codex does not review drafts. Fill the PR template, including `Requirements: R…`.
 4. **Check.** The required checks (`checks`, `acceptance`, `owner-approval`) must be green. Codex reviews every PR automatically: fix its findings or answer them on the thread, then resolve the conversation. A project with a web UI also gets `browser-qa`: browser checks with screenshots posted on the PR (`.claude/rules/browser-qa.md`). A bug you cannot fix in 3 attempts: comment `@codex fix <what is failing>` on the PR, then re-run the checks on its commit yourself.
 5. **Merge.** Projects are private repos on GitHub Free (owner's rule, 2026-10-25), so there is no branch protection and no auto-merge.
-   - Merge the PR yourself (squash) only when `checks`, `acceptance` and `owner-approval` are all green on its last commit, its conversations are resolved and Codex has no open P0/P1.
+   - Merge the PR yourself, squash only (no merge commits), only when `checks`, `acceptance` and `owner-approval` are all green on its last commit, its conversations are resolved and Codex has no open P0/P1.
    - Never merge on red or pending, and never push to `main`.
    - Where the repo does have branch protection (GitHub Pro), enable auto-merge instead.
 6. **Owner gate.** A PR that changes a path in `.github/owner-approval-paths.txt` (domain rules: tax, accounting, audit, legal; the contract; the gates) fails `owner-approval` until it has the `owner-approved` label. Who adds it (`AGENTS.md` → Safety):
