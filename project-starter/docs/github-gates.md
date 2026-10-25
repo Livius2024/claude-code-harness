@@ -29,16 +29,17 @@ Ai nevoie de `gh` (GitHub CLI) autentificat (`gh auth login`). Comenzile merg la
    ```
 4. Verifică: `gh api "repos/{owner}/{repo}/branches/main/protection" --jq ".required_status_checks.contexts"` trebuie să arate cele 3 nume.
 
-**Repo privat pe planul GitHub Free:** pasul 3 dă `HTTP 403 Upgrade to GitHub Pro`. Protecția ramurilor și auto-merge pe repo-uri private cer GitHub Pro (sau repo public). Fără ele, verificările rulează și se văd roșu/verde, dar nimic nu le impune.
+**Repo privat pe planul GitHub Free** (regula ta din 25.10.2026: toate proiectele sunt private, fără Pro): pasul 3 dă `HTTP 403 Upgrade to GitHub Pro`, iar auto-merge nu pornește. Verificările rulează și se văd roșu/verde, dar GitHub nu le impune. Le respectă agentul: unește singur un PR (squash) doar când toate cele 3 verificări sunt verzi, conversațiile sunt rezolvate și Codex nu are P0/P1. Pasul 3 rămâne pentru cazul în care treci pe Pro.
 
 ## Cum lucrezi zilnic
 
-- **PR obișnuit:** nu faci nimic. Agentul deschide PR-ul, pornește auto-merge, repară ce găsesc CI și Codex; GitHub unește când e verde.
-- **PR care atinge reguli** (fiscal, audit, contabil, legal, contract, porți): `owner-approval` e roșu și agentul îți scrie un rând în fir cu fișierele. Te uiți la diff, apoi:
+- **PR obișnuit:** nu faci nimic. Agentul deschide PR-ul, repară ce găsesc CI și Codex și îl unește când e verde (cu auto-merge, dacă repo-ul are protecție).
+- **PR care atinge doar fabrica** (CI, porți, `AGENTS.md`, `.claude/`): nu faci nimic. Agentul pune singur eticheta `owner-approved` după CI verde și Codex fără P0/P1, dar nu și dacă PR-ul scoate o cale protejată sau slăbește o verificare.
+- **PR care atinge regulile de domeniu** (fiscal, audit, contabil, legal, contractul, `CLAUDE.md`): `owner-approval` e roșu și agentul îți scrie un rând în fir cu fișierele. Te uiți la diff, apoi:
   ```
   gh pr edit <număr> --add-label owner-approved
   ```
-  (sau pe github.com: PR → Labels → `owner-approved`). Verificarea se reia singură și PR-ul se unește. Agentul nu pune niciodată eticheta el însuși.
+  (sau pe github.com: PR → Labels → `owner-approved`). Verificarea se reia singură și PR-ul se unește. Pe aceste PR-uri agentul nu pune niciodată eticheta.
 - **Altă listă de căi protejate:** editezi `.github/owner-approval-paths.txt` (un glob pe rând). Verificarea (workflow-ul, scriptul și lista) rulează mereu în versiunea de pe `main` (`pull_request_target`), deci un PR nu se poate „deproteja” singur; schimbarea listei e ea însăși un PR care îți cere eticheta.
 - **Primul commit:** starter-ul trebuie să ajungă pe `main` înainte de primul PR (așa face `new-project.ps1` + primul tău commit). Altfel `owner-approval` nu rulează pe acel PR și GitHub îl așteaptă la nesfârșit.
 - **Limită cunoscută:** un PR care schimbă `.github/` poate adăuga un job cu același nume (`owner-approval`) care trece mereu. Poarta reală tot îl marchează roșu, iar Codex îl semnalează ca P0, dar uită-te la diff-ul din `.github/` înainte să pui eticheta.

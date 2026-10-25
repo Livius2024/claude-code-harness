@@ -93,7 +93,11 @@ What this product must always do or never do, whatever the speed or cost trade-o
 
 - Never commit secrets; never edit `.env*` unless asked (`.env.example` is the exception: names only, never a value). Never touch production data.
 - No force-push, history rewrite, `reset --hard`, or push to `main`. Everything reaches `main` through a PR with green required checks.
-- Never add the `owner-approved` label, change `.github/owner-approval-paths.txt`, or edit CI, branch protection or the check scripts to get a PR through. Those changes are the owner's.
+- The `owner-approved` label:
+  - **Owner only** on domain paths: `spec.md`, `plan.md`, `CLAUDE.md`, `docs/domain/**`, tax, fiscal and audit-rule files.
+  - **You may add it** when every protected path in the PR is a factory path (`.github/**`, `.claude/**`, `AGENTS.md`, `scripts/check_*.py`), CI is green and Codex has no open P0/P1.
+  - Never when the PR removes a path from `.github/owner-approval-paths.txt` or weakens a check.
+- Never edit `.github/owner-approval-paths.txt`, CI, branch protection or the check scripts to get a PR through.
 - Never delete, skip or weaken a failing test to make the suite pass. Fix the code, or report why you can't.
 - Never assume a change works: test it. If the project has no way to test it, ask the owner whether to skip testing.
 
@@ -104,7 +108,7 @@ What this product must always do or never do, whatever the speed or cost trade-o
 3. For UI: the page was checked in a browser at desktop and phone width.
 4. The affected `ACCEPTANCE.md` rows are PASS on the current SHA, with the evidence path filled in.
 5. A review by the other engine ran on the final change: on GitHub, Codex's automatic PR review (rules below); findings P0/P1 are fixed or explicitly accepted by the owner, and their conversations resolved. In an `/autopilot` run, Autopilot's blind acceptance is that independent check; a Codex review on top only if the owner asks.
-6. The required checks are green on the PR's last commit and the PR merges through auto-merge; a PR touching an owner-only path waits for the owner's `owner-approved` label.
+6. The required checks are green on the PR's last commit and the PR is merged (squash). The merge is done by auto-merge where branch protection exists, otherwise by you, only on green (`.claude/rules/factory.md` step 5). A PR touching a domain path waits for the owner's `owner-approved` label.
 7. The report says what changed, which checks ran, and what is still unverified.
 
 ## Code Review Rules

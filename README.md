@@ -23,9 +23,9 @@ Firele (threads) unui proiect claude.ai încarcă din repo doar `CLAUDE.md`, `.c
 | Fluxul fabricii (spec → tichete → PR → verificări → auto-merge), încărcat de orice fir | `.claude/rules/factory.md` |
 | Teste, tipuri, lint | `.github/workflows/ci.yml` (job `checks`) |
 | Fiecare cerință `R<n>` din `spec.md` are rând în `ACCEPTANCE.md` | `scripts/check_acceptance.py` (job `acceptance`) |
-| PR-urile care ating reguli fiscale/audit, contractul sau porțile așteaptă eticheta ta `owner-approved` | `.github/workflows/owner-approval.yml`, `.github/owner-approval-paths.txt` |
+| PR-urile care ating reguli fiscale/audit sau contractul așteaptă eticheta ta `owner-approved`; pe cele care ating doar fabrica (CI, porți, reguli de agent) o pune agentul | `.github/workflows/owner-approval.yml`, `.github/owner-approval-paths.txt` |
 | Review Codex automat, P0/P1 | secțiunea `## Code Review Rules` din `AGENTS.md` |
-| `main` protejat, merge doar cu verificările verzi | `.github/branch-protection.json` |
+| `main` protejat, merge doar cu verificările verzi. Proiectele tale sunt private pe GitHub Free, deci regula o respectă agentul, nu GitHub | `.github/branch-protection.json` (pentru Pro), `.claude/rules/factory.md` |
 | QA în browser (aplicații web): verificări Playwright la desktop și telefon, capturi de ecran puse ca comentariu pe PR | `.github/workflows/browser-qa.yml`, `e2e/`, `.claude/rules/browser-qa.md` |
 
 Pașii de pornire pe un repo (auto-merge, eticheta, protecția ramurii) sunt în `project-starter/docs/github-gates.md`.
