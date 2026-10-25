@@ -89,3 +89,13 @@ def test_missing_patterns_file_protects_nothing(repo):
     base = git(repo, "rev-parse", "HEAD")
     head = commit(repo, "spec.md")
     assert main(["--base", base, "--head", head, "--patterns", str(repo / "absent.txt")]) == 0
+
+
+def test_renaming_a_protected_file_needs_label(repo):
+    commit(repo, "spec.md")
+    base = git(repo, "rev-parse", "HEAD")
+    git(repo, "mv", "spec.md", "other.md")
+    git(repo, "commit", "-qm", "rename")
+    head = git(repo, "rev-parse", "HEAD")
+    assert run(repo, base, head) == 1
+    assert run(repo, base, head, "owner-approved") == 0

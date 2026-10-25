@@ -1,10 +1,15 @@
 # Changes to domain rules (tax, audit, accounting, legal), to the contract and
 # to the gates need the owner's `owner-approved` label. Separate from CI so
 # that adding a label re-runs only this check and never replaces a CI result.
+#
+# `pull_request_target` runs this file, the check script and the path list as
+# they are on the base branch, so a PR cannot weaken the gate that judges it.
+# It never executes code from the PR: the PR's commits are only fetched for
+# `git diff`. The workflow must be on main before the first PR it guards.
 name: Owner approval
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
 
 permissions:
@@ -18,28 +23,22 @@ jobs:
   owner-approval:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out the base branch (trusted)
+        uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.base.sha }}
           fetch-depth: 0
+          persist-credentials: false
+      - name: Fetch the PR's commits for the diff only
+        env:
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: git fetch --no-tags origin "+refs/pull/$NUMBER/head:refs/remotes/pr/head"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      # The check and its path list come from the base branch, so a PR cannot
-      # unprotect a path or weaken the check by editing them. They fall back to
-      # the PR's copy only when the base branch does not have them yet.
-      - name: Load the check from the base branch
-        env:
-          BASE: ${{ github.event.pull_request.base.sha }}
-        run: |
-          for f in scripts/check_owner_approval.py .github/owner-approval-paths.txt; do
-            git show "$BASE:$f" > "$RUNNER_TEMP/$(basename "$f")" 2>/dev/null || cp "$f" "$RUNNER_TEMP/$(basename "$f")"
-          done
       - name: Check
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
           LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
-        run: >
-          python "$RUNNER_TEMP/check_owner_approval.py"
-          --base "$BASE" --head "$HEAD" --labels "$LABELS"
-          --patterns "$RUNNER_TEMP/owner-approval-paths.txt"
+        run: python scripts/check_owner_approval.py --base "$BASE" --head "$HEAD" --labels "$LABELS"

@@ -47,7 +47,9 @@ def protected_changes(changed: list[str], patterns: list[str]) -> list[str]:
 
 def changed_files(base: str, head: str) -> list[str]:
     out = subprocess.run(
-        ["git", "diff", "--name-only", f"{base}...{head}"],
+        # --no-renames: a rename must list its protected source path too, or
+        # moving spec.md to other.md would slip past the gate.
+        ["git", "diff", "--name-only", "--no-renames", f"{base}...{head}"],
         check=True,
         capture_output=True,
         text=True,

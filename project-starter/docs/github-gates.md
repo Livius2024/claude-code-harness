@@ -38,7 +38,9 @@ Ai nevoie de `gh` (GitHub CLI) autentificat (`gh auth login`). Comenzile merg la
   gh pr edit <număr> --add-label owner-approved
   ```
   (sau pe github.com: PR → Labels → `owner-approved`). Verificarea se reia singură și PR-ul se unește. Agentul nu pune niciodată eticheta el însuși.
-- **Altă listă de căi protejate:** editezi `.github/owner-approval-paths.txt` (un glob pe rând). Lista e citită de pe `main`, deci un PR nu se poate „deproteja” singur; schimbarea listei e ea însăși un PR care îți cere eticheta.
+- **Altă listă de căi protejate:** editezi `.github/owner-approval-paths.txt` (un glob pe rând). Verificarea (workflow-ul, scriptul și lista) rulează mereu în versiunea de pe `main` (`pull_request_target`), deci un PR nu se poate „deproteja” singur; schimbarea listei e ea însăși un PR care îți cere eticheta.
+- **Primul commit:** starter-ul trebuie să ajungă pe `main` înainte de primul PR (așa face `new-project.ps1` + primul tău commit). Altfel `owner-approval` nu rulează pe acel PR și GitHub îl așteaptă la nesfârșit.
+- **Limită cunoscută:** un PR care schimbă `.github/` poate adăuga un job cu același nume (`owner-approval`) care trece mereu. Poarta reală tot îl marchează roșu, iar Codex îl semnalează ca P0, dar uită-te la diff-ul din `.github/` înainte să pui eticheta.
 - **PR rămas în urma lui `main`** (`strict: true`): agentul face „Update branch” și CI rulează din nou pe codul unit.
 
 ## Ce nu se poate impune din GitHub
