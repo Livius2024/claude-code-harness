@@ -29,11 +29,11 @@ def file_suite(name, specs=(), suites=()):
     return {"title": name, "file": name, "specs": list(specs), "suites": list(suites)}
 
 
-def run(tmp_path: Path, data, *extra: str) -> str:
+def run(tmp_path: Path, data, *extra: str, code: int = 0) -> str:
     results = tmp_path / "results.json"
     if data is not None:
         results.write_text(json.dumps(data), encoding="utf-8")
-    assert main(["--results", str(results), "--out", str(tmp_path / "out"), *extra]) == 0
+    assert main(["--results", str(results), "--out", str(tmp_path / "out"), *extra]) == code
     return (tmp_path / "out" / "comment.md").read_text(encoding="utf-8")
 
 
@@ -153,3 +153,36 @@ def test_no_checks_is_not_green(tmp_path):
 
     assert "## ❌ Browser QA" in comment
     assert "No checks found" in comment
+
+
+def one_check(*runs):
+    return report(file_suite("a.spec.ts", specs=[{"title": "R1 imports", "tests": list(runs)}]))
+
+
+def test_all_skipped_is_neverificat_not_green(tmp_path):
+    comment = run(tmp_path, one_check(pw_test("desktop", "skipped", [result("skipped")])))
+
+    assert "## ⚠️ Browser QA: NEVERIFICAT" in comment
+    assert "✅" not in comment
+
+
+def test_passed_at_one_size_but_skipped_at_the_other_is_not_verified(tmp_path):
+    data = one_check(
+        pw_test("desktop", "expected", [result("passed")]),
+        pw_test("phone", "skipped", [result("skipped")]),
+    )
+    comment = run(tmp_path, data)
+
+    assert "## ⚠️ Browser QA: NEVERIFICAT" in comment
+    assert "| R1 imports | R1 | ✅ PASS | ⏭️ NEVERIFICAT (skipped) |" in comment
+
+
+def test_strict_fails_unless_every_check_ran_and_passed(tmp_path):
+    green = one_check(pw_test("desktop", "expected", [result("passed")]))
+    skipped = one_check(pw_test("desktop", "skipped", [result("skipped")]))
+    failed = one_check(pw_test("desktop", "unexpected", [result("failed", error="boom")]))
+
+    run(tmp_path, green, "--strict", code=0)
+    run(tmp_path, skipped, "--strict", code=1)
+    run(tmp_path, failed, "--strict", code=1)
+    run(tmp_path, None, "--strict", code=1)

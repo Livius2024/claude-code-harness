@@ -56,7 +56,7 @@ jobs:
           SHA: ${{ github.event.pull_request.head.sha }}
         run: >-
           python3 scripts/browser_qa_comment.py --results e2e/results.json --out qa-out
-          --image-base "$IMAGE_BASE" --run-url "$RUN_URL" --sha "$SHA"
+          --image-base "$IMAGE_BASE" --run-url "$RUN_URL" --sha "$SHA" --strict
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -67,6 +67,7 @@ jobs:
             ${{ runner.temp }}/demo/e2e/test-results/
           retention-days: 14
 
+  # Write token: runs the publish script from the base branch only.
   publish:
     needs: browser-qa
     if: "!cancelled() && github.event.pull_request.head.repo.full_name == github.repository"
@@ -78,6 +79,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.base.sha }}
           sparse-checkout: project-starter/scripts
       - uses: actions/download-artifact@v4
         with:
@@ -90,4 +92,9 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           RUN_KEY: ${{ github.run_id }}-${{ github.run_attempt }}
           SRC: browser-qa/qa-out
-        run: bash project-starter/scripts/browser_qa_publish.sh
+        run: |
+          if [ ! -f project-starter/scripts/browser_qa_publish.sh ]; then
+            echo "::notice::The base branch has no browser_qa_publish.sh yet; screenshots are in the browser-qa artifact."
+            exit 0
+          fi
+          bash project-starter/scripts/browser_qa_publish.sh

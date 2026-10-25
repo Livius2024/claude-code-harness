@@ -47,6 +47,7 @@ Ai nevoie de `gh` (GitHub CLI) autentificat (`gh auth login`). Comenzile merg la
 ## QA în browser cu capturi pe PR (aplicații web)
 
 - **Pornire:** agentul o pornește singur la primul ecran (redenumește `e2e/playwright.config.example.ts` în `e2e/playwright.config.ts` și pune comanda de pornire a aplicației, vezi `e2e/README.md`). E gratuit: rulează pe GitHub Actions, fără servicii plătite.
+- **Rămâne pornită:** după ce există `e2e/playwright.config.ts`, un PR care îl șterge pică (doar tu decizi s-o oprești). O verificare sărită (`skip`) apare ca NEVERIFICAT și face `browser-qa` roșu.
 - **Ce vezi:** pe fiecare PR apare un comentariu „Browser QA” cu un tabel (fiecare verificare, cu cerința `R<n>`, pe desktop și pe telefon) și capturile de ecran. Raportul complet e în artefactul `browser-qa` al rulării (14 zile).
 - **Unde stau capturile:** pe ramura `browser-qa-screenshots`, creată automat, câte o mapă `pr-<număr>/`. O poți șterge oricând; se recreează la următorul PR (comentariile vechi rămân fără imagini). Pe un repo **public** capturile sunt publice, de aceea verificările folosesc doar date de test.
 - **Opțional, s-o faci obligatorie:** Settings → Branches → `main` → Edit → „Require status checks” → adaugă `browser-qa`. Pe un proiect fără interfață web trece oricum (nu face nimic), deci nu blochează.

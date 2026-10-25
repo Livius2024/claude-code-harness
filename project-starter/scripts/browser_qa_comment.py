@@ -9,7 +9,10 @@ size (desktop, phone), then the screenshots. A check titled with an R-ID
 ACCEPTANCE.md.
 
 When the report is missing (the app did not start, Playwright crashed) the
-comment says NEVERIFICAT instead of pretending the checks passed.
+comment says NEVERIFICAT instead of pretending the checks passed, and so does
+a skipped check: only checks that ran and passed at every size are green.
+With --strict the script exits 1 unless the result is green, which is what
+fails the `browser-qa` job.
 
 --image-base is the URL the shots will be published under (CI pushes them to
 a branch); without it the comment links them relative to <out>, for local use.
@@ -33,7 +36,7 @@ STATUS = {
     "expected": "✅ PASS",
     "unexpected": "❌ FAIL",
     "flaky": "⚠️ FLAKY",
-    "skipped": "⏭️ SKIPPED",
+    "skipped": "⏭️ NEVERIFICAT (skipped)",
 }
 ERROR_CHARS = 600
 
@@ -67,10 +70,11 @@ class Check:
     @property
     def status(self) -> str:
         statuses = {run.status for run in self.runs}
-        for worst in ("unexpected", "flaky", "expected"):
+        # A size that was skipped makes the check unverified, even if another passed.
+        for worst in ("unexpected", "flaky", "skipped"):
             if worst in statuses:
                 return worst
-        return "skipped"
+        return "expected" if statuses else "skipped"
 
 
 def slug(text: str) -> str:
@@ -149,13 +153,24 @@ def _url(base: str, name: str) -> str:
     return f"{base.rstrip('/')}/{name}?raw=true" if base else f"shots/{name}"
 
 
+def is_green(checks: list[Check]) -> bool:
+    return bool(checks) and all(check.status == "expected" for check in checks)
+
+
+def headline(checks: list[Check]) -> str:
+    if is_green(checks):
+        return "✅ Browser QA"
+    if checks and all(check.status in ("expected", "skipped") for check in checks):
+        return "⚠️ Browser QA: NEVERIFICAT"
+    return "❌ Browser QA"
+
+
 def render(checks: list[Check], names: dict[int, str], *, image_base: str, run_url: str, sha: str) -> str:
     projects = list(dict.fromkeys(run.project for check in checks for run in check.runs))
     counts = {key: sum(1 for check in checks if check.status == key) for key in STATUS}
-    headline = "✅" if checks and counts["unexpected"] == 0 and counts["flaky"] == 0 else "❌"
     summary = " · ".join(f"{STATUS[key]} {counts[key]}" for key in STATUS if counts[key])
 
-    lines = [MARKER, f"## {headline} Browser QA", ""]
+    lines = [MARKER, f"## {headline(checks)}", ""]
     meta = [f"Commit `{sha[:7]}`" if sha else "", f"[run, full report and traces]({run_url})" if run_url else ""]
     lines += [f"{summary or 'No checks found in e2e/tests/'}", " · ".join(part for part in meta if part), ""]
 
@@ -205,9 +220,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--image-base", default="", help="URL the shots are published under")
     parser.add_argument("--run-url", default="")
     parser.add_argument("--sha", default="")
+    parser.add_argument("--strict", action="store_true", help="exit 1 unless every check ran and passed")
     args = parser.parse_args(argv)
 
     args.out.mkdir(parents=True, exist_ok=True)
+    green = False
     try:
         report = json.loads(args.results.read_text(encoding="utf-8"))
     except FileNotFoundError:
@@ -220,9 +237,10 @@ def main(argv: list[str] | None = None) -> int:
         checks = read_checks(report)
         names = copy_shots(checks, args.out / "shots")
         comment = render(checks, names, image_base=args.image_base, run_url=args.run_url, sha=args.sha)
+        green = is_green(checks)
     (args.out / "comment.md").write_text(comment, encoding="utf-8")
     print(comment)
-    return 0
+    return 1 if args.strict and not green else 0
 
 
 if __name__ == "__main__":
