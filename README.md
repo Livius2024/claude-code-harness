@@ -26,6 +26,7 @@ Firele (threads) unui proiect claude.ai încarcă din repo doar `CLAUDE.md`, `.c
 | PR-urile care ating reguli fiscale/audit, contractul sau porțile așteaptă eticheta ta `owner-approved` | `.github/workflows/owner-approval.yml`, `.github/owner-approval-paths.txt` |
 | Review Codex automat, P0/P1 | secțiunea `## Code Review Rules` din `AGENTS.md` |
 | `main` protejat, merge doar cu verificările verzi | `.github/branch-protection.json` |
+| QA în browser (aplicații web): verificări Playwright la desktop și telefon, capturi de ecran puse ca comentariu pe PR | `.github/workflows/browser-qa.yml`, `e2e/`, `.claude/rules/browser-qa.md` |
 
 Pașii de pornire pe un repo (auto-merge, eticheta, protecția ramurii) sunt în `project-starter/docs/github-gates.md`.
 

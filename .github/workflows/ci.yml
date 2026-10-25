@@ -39,6 +39,8 @@ jobs:
         run: |
           bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7
           ./actionlint -color .github/workflows/*.yml project-starter/.github/workflows/*.yml
+      - name: Lint starter shell scripts (shellcheck)
+        run: shellcheck project-starter/scripts/*.sh
       - name: Validate branch-protection.json
         run: python3 -m json.tool project-starter/.github/branch-protection.json > /dev/null
       - name: Fresh starter passes its own acceptance check
