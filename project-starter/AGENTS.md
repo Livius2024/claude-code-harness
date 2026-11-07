@@ -11,7 +11,7 @@ This file was copied from the project starter. Before any other work (exception:
 
 1. Read the repo (package.json, pyproject.toml, README, folder layout) and fill every `<...>` below with what you find.
 2. Ask the owner, one question at a time with a recommended answer, only what the repo cannot tell you: what the project is for, who uses it, which domain rules apply.
-3. If the real check commands exist, copy `.claude/verify.example.json` to `.claude/verify.json` and put them in it. If there is no code yet, leave it; the verify gate auto-detects later.
+3. Run `python scripts/check_done.py --list`. If the detected Tests / Lint / Typecheck / Build commands are not the project's real ones, write them in `.claude/done.json` (format in the script's docstring). If there is no code yet, leave it.
 4. Delete the rules in `.claude/rules/` that don't apply to this stack.
 5. Ask the owner for the Non-negotiables (what must never break) and write each with its check.
 6. Remove the `starter:unfilled` marker and this section.
@@ -33,7 +33,7 @@ This file was copied from the project starter. Before any other work (exception:
 | DB migration | `<npm run db:generate && npm run db:migrate>` |
 
 Run the narrowest relevant check after each change, and the full set before calling work done.
-CI (`.github/workflows/ci.yml`) runs the same commands on every PR and is the gate that decides the merge. Locally, the same commands also go in `.claude/verify.json` for Claude Code's verify gate.
+`python scripts/check_done.py` runs the full set (tests, lint, type check, build) and is the definition of done (`.claude/rules/definition-of-done.md`). CI (`.github/workflows/ci.yml`) runs the same script on every PR and is the gate that decides the merge; locally, Claude Code's Stop hook runs it through `.claude/verify.json`.
 
 ## Layout
 
@@ -104,7 +104,7 @@ What this product must always do or never do, whatever the speed or cost trade-o
 ## Definition of done
 
 1. The requested behaviour works, shown by a check that actually ran (test, build, browser).
-2. Type check and lint pass.
+2. `python scripts/check_done.py` exits 0 on the final commit (tests, lint, type check, build), and its table is in the report. Exit 2 means NEVERIFICAT: the work is not done.
 3. For UI: the page was checked in a browser at desktop and phone width.
 4. The affected `ACCEPTANCE.md` rows are PASS on the current SHA, with the evidence path filled in.
 5. A review by the other engine ran on the final change: on GitHub, Codex's automatic PR review (rules below); findings P0/P1 are fixed or explicitly accepted by the owner, and their conversations resolved. In an `/autopilot` run, Autopilot's blind acceptance is that independent check; a Codex review on top only if the owner asks.

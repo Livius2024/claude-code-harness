@@ -1,8 +1,8 @@
 # The factory's quality gates. Hooks do not run in Claude Projects threads,
 # so everything an agent must not skip lives here and in branch protection.
 # Make `checks` and `acceptance` required checks on main, together with
-# `owner-approval` from owner-approval.yml (docs/github-gates.md). Steps whose stack or tool is missing are skipped,
-# so this works before the code exists.
+# `owner-approval` from owner-approval.yml (docs/github-gates.md). Setup steps for a stack the repo
+# does not have are skipped, so this works before the code exists.
 name: CI
 
 on:
@@ -23,26 +23,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Python
+      # Tool setup only. The checks themselves are the definition of done,
+      # scripts/check_done.py, the same command agents and the local Stop hook run.
       - uses: astral-sh/setup-uv@v6
         if: hashFiles('pyproject.toml') != ''
       - name: Install (Python)
         if: hashFiles('pyproject.toml') != ''
         run: uv sync
-      - name: Lint (ruff)
-        if: hashFiles('pyproject.toml') != ''
-        run: |
-          uvx ruff check .
-          uvx ruff format --check .
-      - name: Type check (pyright)
-        if: hashFiles('pyproject.toml') != ''
-        run: uv run --with pyright pyright
-      - name: Test (pytest)
-        if: hashFiles('pyproject.toml') != ''
-        run: |
-          if [ -d tests ]; then uv run pytest -q; else echo "No tests folder yet"; fi
 
-      # Node / TypeScript
       - uses: pnpm/action-setup@v4
         if: hashFiles('pnpm-lock.yaml') != ''
       - uses: actions/setup-node@v4
@@ -55,13 +43,24 @@ jobs:
           if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile
           elif [ -f package-lock.json ]; then npm ci
           else npm install; fi
-      - name: Type check, lint, test, build (Node)
-        if: hashFiles('package.json') != ''
-        run: |
-          npm run typecheck --if-present
-          npm run lint --if-present
-          npm test --if-present
-          npm run build --if-present
+
+      - uses: actions/setup-go@v5
+        if: hashFiles('go.mod') != ''
+        with:
+          go-version-file: go.mod
+      - name: Install golangci-lint
+        if: hashFiles('go.mod') != ''
+        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
+
+      - uses: actions/setup-dotnet@v4
+        if: hashFiles('*.sln', '*.slnx', '*.csproj', '*/*.sln', '*/*.slnx') != ''
+        with:
+          dotnet-version: "10.0.x"
+
+      # Tests, lint, type check, build. NEVERIFICAT (exit 2) fails the job too.
+      # --allow-empty only lets a repo with no code yet pass.
+      - name: Definition of done
+        run: python3 scripts/check_done.py --allow-empty
 
   acceptance:
     runs-on: ubuntu-latest

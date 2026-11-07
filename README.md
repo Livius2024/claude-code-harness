@@ -14,6 +14,21 @@ Totul e **global**, pentru toate proiectele. Fiecare piesă pornește singură, 
 
 Încărcarea tuturor skill-urilor de la început ar umple contextul și ar face agentul mai slab, nu mai bun.
 
+## Adăugat pe 07.11.2026: „gata” doar cu teste, lint, tipuri și build verzi
+
+Claude nu are voie să spună „gata” până nu trece `python scripts/check_done.py`: o singură comandă, cu patru verificări pentru fiecare limbaj găsit în proiect.
+
+| Limbaj | Teste | Lint | Tipuri | Build |
+|---|---|---|---|---|
+| Python | `pytest` | `ruff check` + `ruff format --check` | `pyright` (sau `mypy`, dacă e setat în `pyproject.toml`) | `uv build` dacă e pachet, altfel `compileall` |
+| TypeScript | scriptul `test` | scriptul `lint` | scriptul `typecheck` sau `tsc --noEmit` | scriptul `build` |
+| Go | `go test ./...` | `golangci-lint run` | `go vet ./...` | `go build ./...` |
+| .NET | `dotnet test` | `dotnet format --verify-no-changes` | compilatorul, în build | `dotnet build` |
+
+Dacă un proiect are alte comenzi, ele se scriu în `.claude/done.json` (fișier protejat: doar cu eticheta ta `owner-approved`). Rezultat: 0 = gata; 1 = picat, agentul repară; 2 = NEVERIFICAT (unealtă lipsă, alt sistem de operare, timeout, niciun test), deci tot „nu e gata”.
+
+Aceeași comandă rulează în trei locuri: în firele din cloud prin regula `.claude/rules/definition-of-done.md` (acolo nu există hook-uri), local prin hook-ul Stop `verify-gate` (care citește `.claude/verify.json`) și în GitHub, în job-ul `checks`.
+
 ## Adăugat pe 25.10.2026: porțile stau în GitHub (pentru firele din Projects)
 
 Firele (threads) unui proiect claude.ai încarcă din repo doar `CLAUDE.md`, `.claude/CLAUDE.md` și `.claude/rules/*.md` fără `paths:`. Hook-urile, `settings.json`, skill-urile din repo și `.mcp.json` **nu rulează acolo**, deci tot ce e mai jos (verify gate, prompt-guard) e valabil doar local. În cloud, porțile sunt în GitHub:
@@ -177,9 +192,9 @@ La noi, skill-urile, hook-urile și MCP-urile sunt deja globale. De aceea mapa c
 | `GLOSSARY.md`, `docs/adr/` | Vocabularul și deciziile (Matt Pocock `domain-modeling`) |
 | `.claude/settings.json` | Comenzile sigure permise; `db push` interzis |
 | `.claude/rules/` | Reguli care se încarcă doar pentru fișierele lor: teste, UI, baze de date, 1C |
-| `.claude/verify.example.json` | Comenzile de verificare, după ce există |
-| `.claude/rules/factory.md` | Fluxul fabricii; singura regulă fără `paths:`, deci încărcată și în firele din cloud |
-| `.github/workflows/ci.yml` | Teste, tipuri, lint, build + verificarea `ACCEPTANCE.md`; sare peste ce nu există încă |
+| `.claude/verify.json` | Poarta Stop locală rulează `scripts/check_done.py` |
+| `.claude/rules/factory.md`, `.claude/rules/definition-of-done.md` | Fluxul fabricii și „definiția lui gata”; reguli fără `paths:`, deci încărcate și în firele din cloud |
+| `.github/workflows/ci.yml` | Rulează `scripts/check_done.py` (teste, lint, tipuri, build) + verificarea `ACCEPTANCE.md` |
 | `.github/workflows/owner-approval.yml`, `.github/owner-approval-paths.txt` | PR-urile pe reguli așteaptă eticheta ta `owner-approved` |
 | `.github/branch-protection.json`, `docs/github-gates.md` | Pașii de pornire și porțile; protecția lui `main` și auto-merge doar pe repo-uri cu GitHub Pro |
 | `.github/pull_request_template.md` | PR-ul spune ce cerințe (`R<n>`) acoperă |

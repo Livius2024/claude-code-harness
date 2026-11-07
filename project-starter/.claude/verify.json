@@ -1,0 +1,6 @@
+{
+  "commands": [
+    "python scripts/check_done.py --allow-empty"
+  ],
+  "timeoutSec": 540
+}
