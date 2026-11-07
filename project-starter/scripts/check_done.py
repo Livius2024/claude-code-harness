@@ -129,9 +129,13 @@ def load_config(path: Path) -> tuple[list[Check], int, list[str]]:
 
 
 def validate(checks: list[Check], source: str) -> None:
-    missing = [n for n in NAMES if not any(c.name == n for c in checks)]
-    if missing:
-        raise SetupError(f"{source}: no {', '.join(missing)} check; the definition of done needs all four")
+    for stack in dict.fromkeys(c.stack for c in checks):
+        missing = [n for n in NAMES if not any(c.stack == stack and c.name == n for c in checks)]
+        if missing:
+            raise SetupError(
+                f"{source}: stack {stack!r} has no {', '.join(missing)} check; "
+                "the definition of done needs all four for every stack"
+            )
     for c in checks:
         if not (c.run or c.covered_by or c.not_applicable):
             raise SetupError(f"{source}: {c.stack} {c.name} has nothing to run")

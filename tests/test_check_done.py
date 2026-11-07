@@ -8,7 +8,8 @@ from pathlib import Path
 import pytest
 from check_done import dependency_names, main, missing_tool, no_tests_ran
 
-PY = shlex.quote(sys.executable)
+# cmd.exe on Windows understands only double quotes; sh elsewhere.
+PY = f'"{sys.executable}"' if os.name == "nt" else shlex.quote(sys.executable)
 OK = f"{PY} -c pass"
 BAD = f"{PY} -c \"import sys; print('boom'); sys.exit(3)\""
 
@@ -97,9 +98,10 @@ def test_not_applicable_is_shown_and_does_not_block(tmp_path, capsys):
     "checks, message",
     [
         (four()[:3], "no Build check"),
+        ([*four(), {"name": "Lint", "stack": "Python", "run": OK}], "stack 'Python' has no Tests, Typecheck, Build"),
         ([*four(), {"name": "Deploy", "run": OK}], "name must be one of"),
         (four(Typecheck={"covered_by": "Build"}), '"covered_by" needs a "why"'),
-        (four(Typecheck={"covered_by": "Lint", "why": "x", "stack": "other"}), "which has no command"),
+        (four(Typecheck={"covered_by": "Lint", "why": "x"}, Lint={"not_applicable": "x"}), "which has no command"),
         (four(Lint={"run": OK, "not_applicable": "x"}), "exactly one of"),
         (four(Lint={"not_applicable": " "}), "needs the reason"),
         (four(Lint={"run": [""]}), "non-empty command"),
