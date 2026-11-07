@@ -261,7 +261,7 @@ def run_command(command: str, root: Path, timeout: int, env: dict[str, str]) -> 
 
 def kill_tree(proc: subprocess.Popen) -> None:
     if os.name == "nt":
-        subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], capture_output=True)
+        subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], check=False, capture_output=True)
     else:
         try:
             os.killpg(proc.pid, signal.SIGKILL)
