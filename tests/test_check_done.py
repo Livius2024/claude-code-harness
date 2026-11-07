@@ -200,22 +200,36 @@ def test_the_starter_itself_passes_with_allow_empty():
         ("dotnet test App.sln", "No test is available in App.Tests.dll.\n", True),
         ("dotnet test App.sln", "Passed!  - Failed: 0, Passed: 12, Skipped: 0, Total: 12\n", False),
         ("python -m pytest", "", False),
+        ("go test -json ./...", '{"Action":"skip","Package":"x"}\n', True),
+        (
+            "go test -json ./...",
+            '{"Action":"run","Package":"x","Test":"TestA"}\n{"Action":"pass","Package":"x","Test":"TestA"}\n',
+            False,
+        ),
     ],
 )
 def test_runners_that_exit_0_without_running_a_test_are_caught(command, out, empty):
     assert no_tests_ran(command, out) is empty
 
 
-def test_tools_count_as_installed_only_when_declared_as_dependencies():
+def test_tools_count_as_installed_only_when_a_plain_uv_sync_installs_them():
     pyproject = {
-        "project": {
-            "dependencies": ["httpx>=0.27"],
-            "optional-dependencies": {"dev": ["Ruff==0.6 ; python_version>'3'"]},
-        },
-        "dependency-groups": {"dev": ["pytest[cov]>=8", {"include-group": "x"}]},
+        "project": {"dependencies": ["httpx>=0.27"], "optional-dependencies": {"lint": ["ruff"]}},
+        "dependency-groups": {"dev": ["pytest[cov]>=8", {"include-group": "x"}], "types": ["pyright"]},
         "tool": {"pyright": {}, "mypy": {}},
     }
-    assert dependency_names(pyproject) == {"httpx", "ruff", "pytest"}
+    assert dependency_names(pyproject) == {"httpx", "pytest"}
+    pyproject["tool"]["uv"] = {"default-groups": ["types"]}
+    assert dependency_names(pyproject) == {"httpx", "pyright"}
+    pyproject["tool"]["uv"] = {"default-groups": "all"}
+    assert dependency_names(pyproject) == {"httpx", "pytest", "pyright"}
+
+
+def test_a_relative_executable_is_looked_up_from_the_project_root(tmp_path):
+    (tmp_path / "bin").mkdir()
+    (tmp_path / "bin" / "check").write_text("", encoding="utf-8")
+    assert missing_tool("bin/check --all", tmp_path) is None
+    assert missing_tool("bin/absent --all", tmp_path) == "bin/absent"
 
 
 def test_a_quoted_executable_path_is_found():

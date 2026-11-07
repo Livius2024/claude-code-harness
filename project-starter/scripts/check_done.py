@@ -179,13 +179,18 @@ def python_checks(root: Path, temp: Path) -> list[Check]:
 
 
 def dependency_names(pyproject: dict) -> set[str]:
-    """Names of the packages the project declares (not tools merely configured under [tool.*])."""
+    """Packages a plain `uv sync` installs: the dependencies and uv's default groups.
+
+    Tools only configured under [tool.*], or only in an extra or another group, are not
+    counted, so they get provisioned with `uvx` / `uv run --with` instead.
+    """
     project = pyproject.get("project", {})
     specs = list(project.get("dependencies", []))
-    for group in project.get("optional-dependencies", {}).values():
-        specs += group
-    for group in pyproject.get("dependency-groups", {}).values():
-        specs += [s for s in group if isinstance(s, str)]
+    groups = pyproject.get("dependency-groups", {})
+    defaults = pyproject.get("tool", {}).get("uv", {}).get("default-groups", ["dev"])
+    names = list(groups) if defaults == "all" else defaults
+    for name in names:
+        specs += [s for s in groups.get(name, []) if isinstance(s, str)]
     return {re.split(r"[\s<>=!~;\[(@]", s.strip(), maxsplit=1)[0].lower() for s in specs if isinstance(s, str)}
 
 
@@ -292,7 +297,7 @@ def kill_tree(proc: subprocess.Popen) -> None:
             pass
 
 
-def missing_tool(command: str) -> str | None:
+def missing_tool(command: str, root: Path | None = None) -> str | None:
     try:
         first = shlex.split(command, posix=os.name != "nt")[0]
     except (ValueError, IndexError):
@@ -300,6 +305,8 @@ def missing_tool(command: str) -> str | None:
     if "=" in first or first in {"cd", "set", "export"}:
         return None
     first = first.strip('"')  # cmd.exe keeps the quotes around a path with spaces
+    if root is not None and ("/" in first or "\\" in first) and not Path(first).is_absolute():
+        return None if (root / first).exists() else first  # the command runs from the project root
     return None if shutil.which(first) else first
 
 
@@ -312,7 +319,7 @@ def run_check(check: Check, root: Path, timeout: int, env: dict[str, str]) -> Re
     if check.os and not sys.platform.startswith(check.os.lower().replace("windows", "win32")):
         return Result(check, NEVER, f"needs {check.os}; this machine is {sys.platform}")
     for command in check.run:
-        tool = missing_tool(command)
+        tool = missing_tool(command, root)
         if tool:
             return Result(check, NEVER, f"`{tool}` is not installed here")
         started = time.monotonic()
@@ -335,12 +342,26 @@ def run_check(check: Check, root: Path, timeout: int, env: dict[str, str]) -> Re
 
 def no_tests_ran(command: str, out: str) -> bool:
     """Runners that exit 0 when there is nothing to test."""
+    if "go test" in command and "-json" in command:
+        return not any(event.get("Test") and event.get("Action") in ("pass", "fail") for event in json_lines(out))
     if "go test" in command:
         return re.search(r"^ok\s", out, re.MULTILINE) is None  # only "[no test files]" / "no packages"
     if "dotnet test" in command:
         ran = r"Passed!|Failed!|Total tests:\s*[1-9]|\btotal:\s*[1-9]"
         return re.search(ran, out, re.IGNORECASE) is None
     return False
+
+
+def json_lines(out: str) -> list[dict]:
+    events = []
+    for line in out.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(event, dict):
+            events.append(event)
+    return events
 
 
 def clean_env(patterns: list[str]) -> dict[str, str]:
