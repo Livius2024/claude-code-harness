@@ -92,14 +92,20 @@ def load_config(path: Path) -> tuple[list[Check], int, list[str]]:
         run = raw.get("run", [])
         if isinstance(run, str):
             run = [run]
-        modes = [bool(run), "covered_by" in raw, "not_applicable" in raw]
-        if sum(modes) != 1:
+        modes = [key for key in ("run", "covered_by", "not_applicable") if key in raw]
+        if len(modes) != 1:
             raise SetupError(f'{where}: give exactly one of "run", "covered_by" or "not_applicable"')
-        if not all(isinstance(c, str) and c.strip() for c in run):
-            raise SetupError(f'{where}: "run" must hold non-empty command strings')
-        if "covered_by" in raw and not str(raw.get("why", "")).strip():
-            raise SetupError(f'{where}: "covered_by" needs a "why"')
-        if "not_applicable" in raw and not str(raw["not_applicable"]).strip():
+        if not isinstance(run, list) or not run or not all(isinstance(c, str) and c.strip() for c in run):
+            if "run" in raw:
+                raise SetupError(f'{where}: "run" must hold non-empty command strings')
+        if "covered_by" in raw:
+            if raw["covered_by"] not in NAMES or raw["covered_by"] == name:
+                raise SetupError(f'{where}: "covered_by" must name another of {", ".join(NAMES)}')
+            if not isinstance(raw.get("why"), str) or not raw["why"].strip():
+                raise SetupError(f'{where}: "covered_by" needs a "why"')
+        if "not_applicable" in raw and (
+            not isinstance(raw["not_applicable"], str) or not raw["not_applicable"].strip()
+        ):
             raise SetupError(f'{where}: "not_applicable" needs the reason')
         checks.append(
             Check(
@@ -127,6 +133,8 @@ def validate(checks: list[Check], source: str) -> None:
     if missing:
         raise SetupError(f"{source}: no {', '.join(missing)} check; the definition of done needs all four")
     for c in checks:
+        if not (c.run or c.covered_by or c.not_applicable):
+            raise SetupError(f"{source}: {c.stack} {c.name} has nothing to run")
         if c.covered_by and not any(o.stack == c.stack and o.name == c.covered_by and o.run for o in checks):
             raise SetupError(f"{source}: {c.stack} {c.name} is covered by {c.covered_by}, which has no command")
 
@@ -145,7 +153,7 @@ def python_checks(root: Path, temp: Path) -> list[Check]:
             return f"{py} -m {module}"
         return f"uv run {module}" if listed else f"uv run --with {module} {module}"
 
-    deps = text.lower()
+    deps = dependency_names(pyproject)
     ruff = "uvx ruff" if uv and "ruff" not in deps else tool("ruff", True)
     tool_cfg = pyproject.get("tool", {})
     if "mypy" in tool_cfg:
@@ -164,6 +172,17 @@ def python_checks(root: Path, temp: Path) -> list[Check]:
         Check("Typecheck", "Python", [typecheck]),
         Check("Build", "Python", [build]),
     ]
+
+
+def dependency_names(pyproject: dict) -> set[str]:
+    """Names of the packages the project declares (not tools merely configured under [tool.*])."""
+    project = pyproject.get("project", {})
+    specs = list(project.get("dependencies", []))
+    for group in project.get("optional-dependencies", {}).values():
+        specs += group
+    for group in pyproject.get("dependency-groups", {}).values():
+        specs += [s for s in group if isinstance(s, str)]
+    return {re.split(r"[\s<>=!~;\[(@]", s.strip(), maxsplit=1)[0].lower() for s in specs if isinstance(s, str)}
 
 
 def node_checks(root: Path) -> list[Check]:
@@ -276,6 +295,7 @@ def missing_tool(command: str) -> str | None:
         return None
     if "=" in first or first in {"cd", "set", "export"}:
         return None
+    first = first.strip('"')  # cmd.exe keeps the quotes around a path with spaces
     return None if shutil.which(first) else first
 
 
@@ -299,12 +319,24 @@ def run_check(check: Check, root: Path, timeout: int, env: dict[str, str]) -> Re
             return Result(check, NEVER, f"`{command}` timed out after {timeout}s", tail)
         if code == 5 and "pytest" in command:
             return Result(check, NEVER, f"`{command}` collected no tests", tail)
+        if code == 0 and no_tests_ran(command, out):
+            return Result(check, NEVER, f"`{command}` ran no tests", tail)
         module = MISSING_MODULE.search(out)
         if code != 0 and module and f"-m {module.group(1).split('.')[0]}" in command:
             return Result(check, NEVER, f"Python module `{module.group(1)}` is not installed", tail)
         if code != 0:
             return Result(check, FAIL, f"`{command}` exited {code} after {seconds:.0f}s", tail)
     return Result(check, PASS)
+
+
+def no_tests_ran(command: str, out: str) -> bool:
+    """Runners that exit 0 when there is nothing to test."""
+    if "go test" in command:
+        return re.search(r"^ok\s", out, re.MULTILINE) is None  # only "[no test files]" / "no packages"
+    if "dotnet test" in command:
+        ran = r"Passed!|Failed!|Total tests:\s*[1-9]|\btotal:\s*[1-9]"
+        return re.search(ran, out, re.IGNORECASE) is None
+    return False
 
 
 def clean_env(patterns: list[str]) -> dict[str, str]:

@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 
 import pytest
-from check_done import main
+from check_done import dependency_names, main, missing_tool, no_tests_ran
 
 PY = shlex.quote(sys.executable)
 OK = f"{PY} -c pass"
@@ -103,6 +103,12 @@ def test_not_applicable_is_shown_and_does_not_block(tmp_path, capsys):
         (four(Lint={"run": OK, "not_applicable": "x"}), "exactly one of"),
         (four(Lint={"not_applicable": " "}), "needs the reason"),
         (four(Lint={"run": [""]}), "non-empty command"),
+        (four(Lint={"run": []}), "non-empty command"),
+        (four(Lint={"covered_by": None, "why": "x"}), '"covered_by" must name another'),
+        (four(Lint={"covered_by": "Lint", "why": "x"}), '"covered_by" must name another'),
+        (four(Lint={"covered_by": "Build", "why": None}), '"covered_by" needs a "why"'),
+        (four(Lint={"not_applicable": None}), "needs the reason"),
+        (four(Lint={"stack": "x"}), "exactly one of"),
     ],
 )
 def test_a_config_that_drops_or_bends_a_check_is_rejected(tmp_path, capsys, checks, message):
@@ -181,3 +187,34 @@ def test_the_config_wins_over_detection(tmp_path, capsys):
 def test_the_starter_itself_passes_with_allow_empty():
     starter = Path(__file__).resolve().parent.parent / "project-starter"
     assert run(starter, "--allow-empty") == 0
+
+
+@pytest.mark.parametrize(
+    "command, out, empty",
+    [
+        ("go test ./...", "?   \texample.com/x\t[no test files]\n", True),
+        ("go test ./...", "ok  \texample.com/x\t0.01s\n?   \texample.com/y\t[no test files]\n", False),
+        ("go test ./...", "ok  \texample.com/x\t(cached)\n", False),
+        ("dotnet test App.sln", "No test is available in App.Tests.dll.\n", True),
+        ("dotnet test App.sln", "Passed!  - Failed: 0, Passed: 12, Skipped: 0, Total: 12\n", False),
+        ("python -m pytest", "", False),
+    ],
+)
+def test_runners_that_exit_0_without_running_a_test_are_caught(command, out, empty):
+    assert no_tests_ran(command, out) is empty
+
+
+def test_tools_count_as_installed_only_when_declared_as_dependencies():
+    pyproject = {
+        "project": {
+            "dependencies": ["httpx>=0.27"],
+            "optional-dependencies": {"dev": ["Ruff==0.6 ; python_version>'3'"]},
+        },
+        "dependency-groups": {"dev": ["pytest[cov]>=8", {"include-group": "x"}]},
+        "tool": {"pyright": {}, "mypy": {}},
+    }
+    assert dependency_names(pyproject) == {"httpx", "ruff", "pytest"}
+
+
+def test_a_quoted_executable_path_is_found():
+    assert missing_tool(f'"{sys.executable}" -c pass') is None
