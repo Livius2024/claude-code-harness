@@ -98,6 +98,7 @@ def test_not_applicable_is_shown_and_does_not_block(tmp_path, capsys):
     "checks, message",
     [
         (four()[:3], "no Build check"),
+        ([], "no checks"),
         ([*four(), {"name": "Lint", "stack": "Python", "run": OK}], "stack 'Python' has no Tests, Typecheck, Build"),
         ([*four(), {"name": "Deploy", "run": OK}], "name must be one of"),
         (four(Typecheck={"covered_by": "Build"}), '"covered_by" needs a "why"'),
@@ -178,6 +179,11 @@ def test_no_stack_and_no_config_is_neverificat_unless_allowed(tmp_path, capsys):
     assert run(tmp_path) == 2
     assert "nothing was verified" in capsys.readouterr().out
     assert run(tmp_path, "--allow-empty") == 0
+
+
+def test_allow_empty_does_not_excuse_an_empty_config(tmp_path, capsys):
+    assert run(config(tmp_path, []), "--allow-empty") == 1
+    assert "no checks" in capsys.readouterr().out
 
 
 def test_the_config_wins_over_detection(tmp_path, capsys):

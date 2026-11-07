@@ -129,6 +129,8 @@ def load_config(path: Path) -> tuple[list[Check], int, list[str]]:
 
 
 def validate(checks: list[Check], source: str) -> None:
+    if not checks:
+        raise SetupError(f"{source}: no checks; the definition of done needs Tests, Lint, Typecheck and Build")
     for stack in dict.fromkeys(c.stack for c in checks):
         missing = [n for n in NAMES if not any(c.stack == stack and c.name == n for c in checks)]
         if missing:

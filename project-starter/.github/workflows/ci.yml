@@ -41,6 +41,7 @@ jobs:
         if: hashFiles('package.json') != ''
         run: |
           if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile
+          elif [ -f yarn.lock ]; then corepack enable && yarn install
           elif [ -f package-lock.json ]; then npm ci
           else npm install; fi
 
