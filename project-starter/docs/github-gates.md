@@ -4,7 +4,7 @@
 
 | Poartă | Unde | Ce oprește |
 |---|---|---|
-| `checks` | `.github/workflows/ci.yml` | Teste (pytest / npm test), tipuri (pyright / typecheck), lint (ruff / lint), build |
+| `checks` | `.github/workflows/ci.yml` | `scripts/check_done.py`: teste, lint, tipuri și build pentru fiecare limbaj din proiect; NEVERIFICAT pică și el |
 | `acceptance` | `ci.yml` + `scripts/check_acceptance.py` | O cerință `R<n>` din `spec.md` fără rând în `ACCEPTANCE.md`, rânduri orfane, PASS fără comandă, SHA sau dovadă |
 | `owner-approval` | `.github/workflows/owner-approval.yml` + `.github/owner-approval-paths.txt` | Un PR care atinge reguli fiscale/audit/contabile/legale, contractul (`spec.md`, `plan.md`, `AGENTS.md`) sau porțile, până pui tu eticheta `owner-approved` |
 | `browser-qa` (opțional) | `.github/workflows/browser-qa.yml` + `e2e/` | Un ecran care nu se deschide sau nu arată ce cere `ACCEPTANCE.md`, la desktop și pe telefon. Pune pe PR un comentariu cu capturi de ecran. Oprit până există `e2e/playwright.config.ts` |
