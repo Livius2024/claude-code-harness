@@ -95,9 +95,9 @@ def load_config(path: Path) -> tuple[list[Check], int, list[str]]:
         modes = [key for key in ("run", "covered_by", "not_applicable") if key in raw]
         if len(modes) != 1:
             raise SetupError(f'{where}: give exactly one of "run", "covered_by" or "not_applicable"')
-        if not isinstance(run, list) or not run or not all(isinstance(c, str) and c.strip() for c in run):
-            if "run" in raw:
-                raise SetupError(f'{where}: "run" must hold non-empty command strings')
+        commands_ok = isinstance(run, list) and run and all(isinstance(c, str) and c.strip() for c in run)
+        if "run" in raw and not commands_ok:
+            raise SetupError(f'{where}: "run" must hold non-empty command strings')
         if "covered_by" in raw:
             if raw["covered_by"] not in NAMES or raw["covered_by"] == name:
                 raise SetupError(f'{where}: "covered_by" must name another of {", ".join(NAMES)}')
