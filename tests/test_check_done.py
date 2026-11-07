@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 
 import pytest
-from check_done import dependency_names, main, missing_tool, no_tests_ran
+from check_done import dependency_names, main, missing_tool, no_tests_ran, quote
 
 # cmd.exe on Windows understands only double quotes; sh elsewhere.
 PY = f'"{sys.executable}"' if os.name == "nt" else shlex.quote(sys.executable)
@@ -169,7 +169,8 @@ def test_go_and_dotnet_projects_get_their_own_four_checks(tmp_path, capsys):
     out = listed(tmp_path, capsys)
     for command in ("go test ./...", "golangci-lint run", "go vet ./...", "go build ./..."):
         assert command in out
-    assert "dotnet test src/App.sln" in out and "dotnet format src/App.sln --verify-no-changes" in out
+    sln = quote("src/App.sln")  # cmd.exe quoting on Windows
+    assert f"dotnet test {sln}" in out and f"dotnet format {sln} --verify-no-changes" in out
     assert "(in Build: the C# compiler checks types while it builds)" in out
 
 
